@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 import logging
+from flask_socketio import SocketIO, emit
 
 
 logging.basicConfig(
@@ -7,9 +8,11 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s : %(message)s",
 )
 
+
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 
 @app.route("/api/telemetry", methods=["POST"])
@@ -32,5 +35,11 @@ def receive_telemetry():
         return jsonify({"error": str(e)}), 400
 
 
-# if __name__ == "__main__":
-#     app.run(debug=True)
+@socketio.on("inference_data")
+def handle_inference_data(data):
+    emit("video_feed", data, broadcast=True)
+    emit("inference_data", data, broadcast=True)
+
+
+if __name__ == "__main__":
+    socketio.run(app, port=8080, debug=False)
