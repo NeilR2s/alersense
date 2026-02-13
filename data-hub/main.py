@@ -101,7 +101,7 @@ class InferenceWorker(threading.Thread):
                 continue
 
             # Run Inference
-            results = self.model(frame, verbose=False)
+            results = self.model(frame, verbose=False, device=config.device)
 
             detections = []
             for result in results:
