@@ -22,10 +22,9 @@ def receive_telemetry():
 
         logger.info(f"Received Data: {data}")
 
-        # Example: Check alerts on the server side too
-        status = "Normal"
+        status = "Attentive"
         if data.get("inattentive"):
-            status = "ALERT: Student Inattentive"
+            status = "Inattentive"
 
         return jsonify(
             {"message": "Data received successfully", "server_status": status}
@@ -37,9 +36,12 @@ def receive_telemetry():
 
 @socketio.on("inference_data")
 def handle_inference_data(data):
-    emit("video_feed", data, broadcast=True)
     emit("inference_data", data, broadcast=True)
 
+@socketio.on("video_feed")
+def handle_frame_buffer(buffer):
+    emit("video_feed", buffer, broadcast=True)
 
 if __name__ == "__main__":
     socketio.run(app, port=8080, debug=False)
+    logger.info("Application Starup Complete.")
