@@ -28,11 +28,10 @@ interface StreamData {
 }
 
 export default function Page() {
-    const [frame, setFrame] = useState<string | null>(null);
     const [detections, setDetections] = useState<Detection[]>([]);
     const [isConnected, setIsConnected] = useState(false);
-
-    // Ref to hold the socket instance
+    
+    const imageRef = useRef<HTMLImageElement>(null);
     const socketRef = useRef<Socket | null>(null);
 
     useEffect(() => {
@@ -49,18 +48,25 @@ export default function Page() {
         });
 
         socketRef.current.on('video_feed', (arrayBuffer) => {
+            console.log(arrayBuffer)
             const blob = new Blob([arrayBuffer], { type: "image/jpeg" });
             const url = URL.createObjectURL(blob);
+            if (imageRef.current){
+                if (imageRef.current.src) {
+                    URL.revokeObjectURL(imageRef.current.src);
+                }
+                imageRef.current.src = url;
+                // console.log(imageRef.current.src)
+            } else {
+                console.error("Attempting to mutate a null HTMLImageElement reference")
+                return;
+            }
 
-            const img = document.getElementById("video-element");
-            if (img.src) URL.revokeObjectURL(img.src);
-
-            setFrame(img);
         });
 
         socketRef.current.on('inference_data', (data) => {
             const boxes = data.detections;
-            setDetections(boxes)
+            setDetections(boxes);
         });
 
         // Cleanup on unmount
@@ -82,26 +88,24 @@ export default function Page() {
                 <SiteHeader />
                 <div className="flex flex-1 flex-col">
                     <div className="flex flex-col items-center justify-center min-h-screen text-white">
-                        <div className="relative rounded-lg overflow-hidden bg-black w-[1280px] h-[720px]">
+                        <div className="relative rounded-lg overflow-hidden bg-black max-w-160 max-h-120 w-full h-full object-scale-down">
                             {!isConnected && (
                                 <div className="absolute inset-0 flex items-center justify-center text-gray-500">
                                     Connecting to server...
                                 </div>
                             )}
 
-                            {/* Video Feed */}
-                            {frame && (
-                                <img
-                                    src={frame}
-                                    alt="Live Stream"
-                                    className="w-full h-full object-contain"
-                                />
-                            )}
+                            <img
+                                ref={imageRef}
+                                alt="Live Stream"
+                                className="w-full h-full w-full h-full object-scale-down"
+                            />
+
 
                             {/* Bounding Box Overlays */}
                             {/* Note: This assumes the image is displayed at its native resolution or consistent aspect ratio.
                                 For production, you may need to scale these coordinates based on the display size vs. native size. */}
-                            {frame && detections.map((det, index) => {
+                            {detections && detections.map((det, index) => {
                                 // Assuming 640x480 resolution coming from python. 
                                 // If displayed size differs, you must calculate scale factors.
                                 // For this demo, we assume the container matches the capture size (640px wide).
