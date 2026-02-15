@@ -1,5 +1,5 @@
-eventlet
-gunicorn<26.0
+eventlet==0.40.4
+gunicorn==25.0.3
 flask
 flask-socketio
-python-dotenv
+python-dotenv==1.2.1
