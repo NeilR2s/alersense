@@ -1,0 +1,25 @@
+description: Ultralytics YOLOv12n model trained on /kaggle/input/1alersense/data.yaml
+author: Ultralytics
+date: '2026-02-14T17:29:46.619519'
+version: 8.4.7
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: looking_away
+  1: looking_forward
+  2: phone_use
+  3: raising_hand
+  4: reading_writing
+  5: sleeping
+  6: standing
+  7: talking
+args:
+  batch: 1
+  half: false
+channels: 3

@@ -1,193 +1,160 @@
 """
-{0: 'looking_away', 1: 'looking_forward', 2: 'phone_use', 3: 'raising_hand', 4: 'reading_writing', 5: 'sleeping', 6: 'standing', 7: 'talking'}
+https://docs.ultralytics.com/guides/raspberry-pi/
+https://docs.ultralytics.com/models/yolo26/
 """
 
+import sys
+import time
+import logging
 import cv2
 import socketio
-import time
-import threading
 from ultralytics import YOLO
-from settings import config
+from config import settings
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
+
+# --- Class Mapping ---
+CLASS_MAP = {
+    0: "looking_away",
+    1: "looking_forward",
+    2: "phone_use",
+    3: "raising_hand",
+    4: "reading_writing",
+    5: "sleeping",
+    6: "standing",
+    7: "talking",
+}
+
+# --- Initialize Socket.IO Client ---
+sio = socketio.Client(reconnection=True, reconnection_attempts=0, reconnection_delay=1)
 
 
-class CameraStream:
+@sio.event
+def connect():
+    logger.info("Connected to Socket.IO server.")
+
+
+@sio.event
+def disconnect():
+    logger.warning("Disconnected from Socket.IO server")
+
+
+def get_camera(index):
     """
-    Reads frames from the camera in a separate thread.
+    Initializes camera with optimized buffer settings.
+    Limit buffer size to 1 to always get the newest frame
     """
-
-    def __init__(self):
-        self.stream = cv2.VideoCapture(config.camera_index)
-        self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, config.video_width)
-        self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, config.video_height)
-
-        (self.grabbed, self.frame) = self.stream.read()
-        self.stopped = False
-        self.lock = threading.Lock()
-
-    def start(self):
-        threading.Thread(target=self._update, args=(), daemon=True).start()
-        return self
-
-    def _update(self):
-        while not self.stopped:
-            grabbed, frame = self.stream.read()
-            with self.lock:
-                self.grabbed = grabbed
-                self.frame = frame
-
-    def read(self):
-        with self.lock:
-            return self.frame.copy() if self.grabbed else None
-
-    def stop(self):
-        self.stopped = True
-        self.stream.release()
+    cap = cv2.VideoCapture(index)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    if not cap.isOpened():
+        raise RuntimeError(f"Could not open webcam at index {index}")
+    return cap
 
 
-class VideoWorker(threading.Thread):
-    def __init__(self, camera: CameraStream, sio: socketio.Client):
-        super().__init__(daemon=True)
-        self.camera = camera
-        self.sio = sio
-        self.stopped = False
-        self.sleep_time = 1.0 / config.video_fps
-
-    def run(self):
-        while not self.stopped:
-            start_time = time.time()
-
-            frame = self.camera.read()
-
-            # >>> FIX: Check if frame is valid before processing <<<
-            if frame is None:
-                time.sleep(0.01)  # Wait a bit for camera
-                continue
-
-            # Now it's safe to resize
-            frame = cv2.resize(frame, (config.video_width, config.video_height))
-            _, buffer = cv2.imencode(
-                ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, config.video_quality]
-            )
-
-            if self.sio.connected:
-                self.sio.emit("video_feed", buffer.tobytes())
-
-            elapsed = time.time() - start_time
-            time.sleep(max(0, self.sleep_time - elapsed))
-
-    def stop(self):
-        self.stopped = True
-
-
-# --- 2. Fix the Inference Worker ---
-class InferenceWorker(threading.Thread):
-    def __init__(self, camera: CameraStream, sio: socketio.Client, model):
-        super().__init__(daemon=True)
-        self.camera = camera
-        self.sio = sio
-        self.model = model
-        self.stopped = False
-        self.sleep_time = 1.0 / config.inference_fps
-
-    def run(self):
-        while not self.stopped:
-            start_time = time.time()
-
-            frame = self.camera.read()
-
-            # >>> FIX: Check if frame is valid before processing <<<
-            if frame is None:
-                time.sleep(0.01)
-                continue
-
-            # Run Inference
-            results = self.model(frame, verbose=False, device=config.device)
-
-            detections = []
-            for result in results:
-                for box in result.boxes:
-                    x1, y1, x2, y2 = box.xyxy[0].tolist()
-                    detections.append(
-                        {
-                            "label": self.model.names[int(box.cls[0])],
-                            "confidence": round(float(box.conf[0]), 2),
-                            "bbox": [int(x1), int(y1), int(x2), int(y2)],
-                        }
-                    )
-
-            if self.sio.connected:
-                self.sio.emit(
-                    "inference_data", {"detections": detections, "timestamp": time.time()}
-                )
-
-            elapsed = time.time() - start_time
-            time.sleep(max(0, self.sleep_time - elapsed))
-
-    def stop(self):
-        self.stopped = True
-
-
-class StreamOrchestrator:
-    def __init__(self):
-        self.sio = socketio.Client()
-        self.camera = None
-        self.video_worker = None
-        self.inference_worker = None
-
-    def start(self):
-        # 1. Connect to Server
-        try:
-            self.sio.connect(config.server_url)
-            print("Connected to socket server.")
-        except Exception as e:
-            print(f"Server connection failed: {e}")
-            return
-
-        # 2. Load Model
-        print("Loading Model...")
-        model = YOLO(config.model_path)
-
-        # 3. Start Camera
-        print("Starting Camera...")
-        self.camera = CameraStream().start()
-        print("Waiting for camera warmup...", end="", flush=True)
-        while self.camera.read() is None:
-            time.sleep(0.1)
-            print(".", end="", flush=True)
-        print("\nCamera ready!")
-
-        # 4. Start Workers
-        self.video_worker = VideoWorker(self.camera, self.sio)
-        self.inference_worker = InferenceWorker(self.camera, self.sio, model)
-
-        self.video_worker.start()
-        self.inference_worker.start()
-
-        print(
-            f"Streaming started.\n Video: {config.video_fps} FPS\n Inference: {config.inference_fps} FPS"
+def main():
+    """
+    Connect to network -> Load model -> Init camera (cap fps) -> Inference -> Transmit data
+    Always compress payload and limit fps to prevent resource exhaustion
+    """
+    try:
+        logger.info("Attempting to connect to Socket.IO server.")
+        sio.connect(settings.server_url, auth={"token": settings.camera_token})
+    except Exception as e:
+        logger.error(
+            f"Failed initial Socket.IO connection: {e}. Will retry in background."
         )
 
-        # Keep main thread alive
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            self.stop()
+    try:
+        logger.info(f"Loading YOLO model from {settings.model_path}...")
+        model = YOLO(settings.model_path)
+    except Exception as e:
+        logger.critical(f"Failed to load model: {e}")
+        sys.exit(1)
 
-    def stop(self):
-        print("Stopping services...")
-        if self.video_worker:
-            self.video_worker.stop()
-        if self.inference_worker:
-            self.inference_worker.stop()
-        if self.camera:
-            self.camera.stop()
-        if self.sio.connected:
-            self.sio.disconnect()
-        print("Done.")
+    try:
+        cap = get_camera(settings.camera_index)
+    except Exception as e:
+        logger.critical(e)
+        sys.exit(1)
+
+    logger.info("Starting production video feed...")
+
+    frame_delay = 1.0 / settings.fps_cap
+
+    try:
+        while True:
+            start_time = time.time()
+            ret, frame = cap.read()
+
+            if not ret:
+                logger.warning(
+                    "Failed to grab frame. Camera disconnected? Retrying in 2s..."
+                )
+                time.sleep(2)
+                cap.release()
+                try:
+                    cap = get_camera(settings.camera_index)
+                except Exception:
+                    pass
+                continue
+
+            try:
+                results = model(
+                    frame, stream=False, verbose=settings.yolo_verbose_logging
+                )
+            except Exception as e:
+                logger.error(f"Inference error: {e}")
+                continue
+
+            predictions_data = []
+            annotated_frame = frame
+
+            if results:
+                r = results[0]
+                annotated_frame = r.plot()
+
+                if r.boxes is not None:
+                    for box in r.boxes:
+                        cls_id = int(box.cls[0].item())
+                        conf = float(box.conf[0].item())
+                        predictions_data.append(
+                            {
+                                "class_name": CLASS_MAP.get(cls_id, "unknown"),
+                                "confidence": round(conf, 3),
+                            }
+                        )
+
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), settings.video_quality]
+            success, buffer = cv2.imencode(".jpg", annotated_frame, encode_param)
+            if not success:
+                logger.error("Failed to encode frame to JPEG")
+                continue
+
+            payload = {
+                "image": buffer.tobytes(),
+                "predictions": predictions_data,
+            }
+
+            if sio.connected:
+                try:
+                    sio.emit("video_feed", payload)
+                except Exception as e:
+                    logger.error(f"Socket emit failed: {e}")
+
+            elapsed_time = time.time() - start_time
+            sleep_time = frame_delay - elapsed_time
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+
+    except KeyboardInterrupt:
+        logger.info("Shutdown signal received.")
+    finally:
+        logger.info("Cleaning up hardware and network resources...")
+        cap.release()
+        sio.disconnect()
+        logger.info("Graceful shutdown complete.")
 
 
-# --- Run ---
 if __name__ == "__main__":
-    app = StreamOrchestrator()
-    app.start()
+    main()
