@@ -88,12 +88,8 @@ export default function HublotLanding() {
                             Menu
                         </button>
                         <div className="hidden lg:flex items-center gap-4">
-                            {/* Note: In the design, 'Sign in' is on the white background usually, but due to responsive overlap, we keep it adaptable */}
                             <button className="px-6 py-2 rounded-full bg-black text-white text-sm font-medium hover:bg-zinc-800 transition-all">
                                 Sign in
-                            </button>
-                            <button className="px-6 py-2 rounded-full border border-zinc-300 bg-white text-black text-sm font-medium hover:bg-zinc-100 transition-all">
-                                Register
                             </button>
                         </div>
                     </div>
@@ -167,11 +163,11 @@ export default function HublotLanding() {
                             className="flex items-center gap-12 mb-12 border-b border-zinc-100 pb-8"
                         >
                             <div>
-                                <div className="text-2xl font-bold text-black">500ms</div>
+                                <div className="text-2xl font-bold text-black">200ms</div>
                                 <div className="text-xs text-zinc-500 font-medium mt-1">Dashboard Refresh Rate</div>
                             </div>
                             <div>
-                                <div className="text-2xl font-bold text-black">3+</div>
+                                <div className="text-2xl font-bold text-black">3</div>
                                 <div className="text-xs text-zinc-500 font-medium mt-1">Biometric Sensors</div>
                             </div>
                         </motion.div>

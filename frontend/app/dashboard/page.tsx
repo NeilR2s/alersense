@@ -1,9 +1,7 @@
 'use client';
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { DataTable } from "@/components/data-table"
-import { SectionCards } from "@/components/section-cards"
+import { DataTable } from "@/components/table"
 import { SiteHeader } from "@/components/site-header"
 import {
     SidebarInset,
@@ -28,7 +26,6 @@ interface StreamData {
 }
 
 export default function Page() {
-    const [detections, setDetections] = useState<Detection[]>([]);
     const [isConnected, setIsConnected] = useState(false);
 
     const imageRef = useRef<HTMLImageElement>(null);
@@ -36,7 +33,6 @@ export default function Page() {
 
 
     useEffect(() => {
-        // socketRef.current = io(process.env.SERVER_URL, { auth: { token: process.env.VIEWER_TOKEN } });
         socketRef.current = io(process.env.NEXT_PUBLIC_SERVER_URL, { auth: { token: process.env.NEXT_PUBLIC_VIEWER_TOKEN } });
 
         const onConnect = () => {
@@ -71,6 +67,7 @@ export default function Page() {
         // Cleanup on unmount
         return () => {
             if (socketRef.current) {
+                setIsConnected(false);
                 socketRef.current.off('connect', onConnect);
                 socketRef.current.off('disconnect', onDisconnect);
                 socketRef.current.off('video_feed', onVideoFeed);
@@ -80,70 +77,41 @@ export default function Page() {
     }, []);
     return (
         <SidebarProvider
-            style={
-                {
-                    "--sidebar-width": "calc(var(--spacing) * 72)",
-                    "--header-height": "calc(var(--spacing) * 12)",
-                } as React.CSSProperties
-            }
+            style={{
+                "--sidebar-width": "18rem", // 72 * 0.25rem
+                "--header-height": "3rem",  // 12 * 0.25rem
+            } as React.CSSProperties}
         >
             <AppSidebar variant="inset" />
             <SidebarInset>
                 <SiteHeader />
                 <div className="flex flex-1 flex-col">
-                    <div className="flex flex-col items-center justify-center min-h-screen text-white">
-                        <div className="relative rounded-lg overflow-hidden bg-black max-w-160 max-h-120 w-full h-full object-scale-down">
+                    {/* Stream Container */}
+                    <div className="flex flex-col items-center justify-center  p-4">
+                        <div className="relative aspect-video w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-xl">
                             {!isConnected && (
-                                <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                                    Connecting to server...
+                                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 text-zinc-500 animate-pulse">
+                                    <p className="text-sm font-medium">Connecting to server...</p>
                                 </div>
                             )}
-
                             <img
                                 ref={imageRef}
-                                alt="Live Stream"
-                                className="w-full h-full w-full h-full object-scale-down"
+                                alt="Live Telemetry Feed"
+                                className="h-full w-full object-contain"
                             />
-
-
-                            {/* Bounding Box Overlays */}
-                            {/* Note: This assumes the image is displayed at its native resolution or consistent aspect ratio.
-                                For production, you may need to scale these coordinates based on the display size vs. native size. */}
-                            {detections && detections.map((det, index) => {
-                                // Assuming 640x480 resolution coming from python. 
-                                // If displayed size differs, you must calculate scale factors.
-                                // For this demo, we assume the container matches the capture size (640px wide).
-                                const [x1, y1, x2, y2] = det.bbox;
-                                const width = x2 - x1;
-                                const height = y2 - y1;
-
-                                return (
-                                    <div
-                                        key={index}
-                                        className="absolute border-2 border-green-500"
-                                        style={{
-                                            left: `${x1}px`,
-                                            top: `${y1}px`,
-                                            width: `${width}px`,
-                                            height: `${height}px`,
-                                        }}
-                                    >
-                                        <span className="absolute -top-6 left-0 bg-green-500 text-black text-xs px-1 font-bold">
-                                            {det.label} {Math.round(det.confidence * 100)}%
-                                        </span>
-                                    </div>
-                                );
-                            })}
                         </div>
                     </div>
 
-                    <div className="@container/main flex flex-1 flex-col gap-2">
-                        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                            <SectionCards />
+                    {/* Data Section */}
+                    <div className="@container/main flex flex-1 flex-col">
+                        <div className="flex flex-col gap-4 py-6 md:gap-6">
+                            {/* Consistent horizontal padding with the table */}
+                            <h1 className="px-4 text-2xl font-semibold tracking-tight lg:px-6">
+                                Telemetry
+                            </h1>
                             <div className="px-4 lg:px-6">
-                                <ChartAreaInteractive />
+                                <DataTable data={data} />
                             </div>
-                            <DataTable data={data} />
                         </div>
                     </div>
                 </div>

@@ -108,12 +108,11 @@ import {
 
 export const schema = z.object({
     id: z.number(),
-    header: z.string(),
-    type: z.string(),
-    status: z.string(),
-    target: z.string(),
-    limit: z.string(),
-    reviewer: z.string(),
+    deviceId: z.string(),
+    name: z.string(),
+    wearableStatus: z.string(),
+    hrChange: z.string(),
+    gsrChange: z.string(),
 })
 
 // Create a separate component for the drag handle
@@ -169,126 +168,63 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         enableHiding: false,
     },
     {
-        accessorKey: "header",
-        header: "Header",
-        cell: ({ row }) => {
-            return <TableCellViewer item={row.original} />
-        },
-        enableHiding: false,
-    },
-    {
-        accessorKey: "type",
-        header: "Section Type",
+        accessorKey: "Device ID",
+        header: "Device ID",
         cell: ({ row }) => (
-            <div className="w-32">
+            <div className="w-0.5">
                 <Badge variant="outline" className="text-muted-foreground px-1.5">
-                    {row.original.type}
+                    {row.original.deviceId}
                 </Badge>
             </div>
         ),
     },
     {
-        accessorKey: "status",
+        accessorKey: "Name",
+        header: "Name",
+        cell: ({ row }) => (
+            <div className="w-15">
+                {row.original.name}
+            </div>
+        ),
+    },
+    {
+        accessorKey: "Status",
         header: "Status",
         cell: ({ row }) => (
             <Badge variant="outline" className="text-muted-foreground px-1.5">
-                {row.original.status === "Active" ? (
+                {row.original.wearableStatus === "Active" ? (
                     <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
-                ) : row.original.status === "Warning" ? (
-                    <IconCircleCheckFilled className="fill-yellow-500 dark:fill-yellow-400" />
-                ) : (
+                ) : row.original.wearableStatus === "Inactive" ? (
                     <IconCircleCheckFilled className="fill-red-500 dark:fill-red-400" />
+                ) : (
+                    <IconLoader />
                 )}
-                {row.original.status}
+                {row.original.wearableStatus}
             </Badge>
-        ),
-    },
-    {
-        accessorKey: "target",
-        header: () => <div className="w-full text-right">Target</div>,
-        cell: ({ row }) => (
-            <form
-                onSubmit={(e) => {
-                    e.preventDefault()
-                    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-                        loading: `Saving ${row.original.header}`,
-                        success: "Done",
-                        error: "Error",
-                    })
-                }}
-            >
-                <Label htmlFor={`${row.original.id}-target`} className="sr-only">
-                    Target
-                </Label>
-                <Input
-                    className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-                    defaultValue={row.original.target}
-                    id={`${row.original.id}-target`}
-                />
-            </form>
-        ),
-    },
-    {
-        accessorKey: "limit",
-        header: () => <div className="w-full text-right">Limit</div>,
-        cell: ({ row }) => (
-            <form
-                onSubmit={(e) => {
-                    e.preventDefault()
-                    toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-                        loading: `Saving ${row.original.header}`,
-                        success: "Done",
-                        error: "Error",
-                    })
-                }}
-            >
-                <Label htmlFor={`${row.original.id}-limit`} className="sr-only">
-                    Limit
-                </Label>
-                <Input
-                    className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-                    defaultValue={row.original.limit}
-                    id={`${row.original.id}-limit`}
-                />
-            </form>
-        ),
-    },
-    {
-        accessorKey: "reviewer",
-        header: "Reviewer",
-        cell: ({ row }) => {
-            const isAssigned = row.original.reviewer !== "Assign reviewer"
 
-            if (isAssigned) {
-                return row.original.reviewer
-            }
-
-            return (
-                <>
-                    <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
-                        Reviewer
-                    </Label>
-                    <Select>
-                        <SelectTrigger
-                            className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
-                            size="sm"
-                            id={`${row.original.id}-reviewer`}
-                        >
-                            <SelectValue placeholder="Assign reviewer" />
-                        </SelectTrigger>
-                        <SelectContent align="end">
-                            <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
-                            <SelectItem value="Jamik Tashpulatov">
-                                Jamik Tashpulatov
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
-                </>
-            )
-        },
+        ),
+    },
+    {
+        accessorKey: "HR Change",
+        header: "HR Change",
+        cell: ({ row }) => (
+            <div className={`w-1 ${row.original.gsrChange[0] === "-" ? "text-red-500" : row.original.gsrChange[0] === "+" ? "text-green-500" : ""}`}>
+                {row.original.hrChange}
+            </div>
+        ),
+    },
+    {
+        accessorKey: "GSR Change",
+        header: "GSR Change",
+        cell: ({ row }) => (
+            <div className={`w-1 ${row.original.gsrChange[0] === "-" ? "text-red-500" : row.original.gsrChange[0] === "+" ? "text-green-500" : ""}`}>
+                {row.original.gsrChange}
+            </div>
+        ),
     },
     {
         id: "actions",
+        header: "Actions",
         cell: () => (
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -302,9 +238,8 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-32">
+                    <DropdownMenuItem>Buzz</DropdownMenuItem>
                     <DropdownMenuItem>Edit</DropdownMenuItem>
-                    <DropdownMenuItem>Make a copy</DropdownMenuItem>
-                    <DropdownMenuItem>Favorite</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -409,34 +344,6 @@ export function DataTable({
             className="w-full flex-col justify-start gap-6"
         >
             <div className="flex items-center justify-between px-4 lg:px-6">
-                <Label htmlFor="view-selector" className="sr-only">
-                    View
-                </Label>
-                <Select defaultValue="outline">
-                    <SelectTrigger
-                        className="flex w-fit @4xl/main:hidden"
-                        size="sm"
-                        id="view-selector"
-                    >
-                        <SelectValue placeholder="Select a view" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="outline">Outline</SelectItem>
-                        <SelectItem value="past-performance">Past Performance</SelectItem>
-                        <SelectItem value="key-personnel">Key Personnel</SelectItem>
-                        <SelectItem value="focus-documents">Focus Documents</SelectItem>
-                    </SelectContent>
-                </Select>
-                <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-                    <TabsTrigger value="outline">Outline</TabsTrigger>
-                    <TabsTrigger value="past-performance">
-                        Past Performance <Badge variant="secondary">3</Badge>
-                    </TabsTrigger>
-                    <TabsTrigger value="key-personnel">
-                        Key Personnel <Badge variant="secondary">2</Badge>
-                    </TabsTrigger>
-                    <TabsTrigger value="focus-documents">Focus Documents</TabsTrigger>
-                </TabsList>
                 <div className="flex items-center gap-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -471,12 +378,10 @@ export function DataTable({
                                 })}
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button variant="outline" size="sm">
-                        <IconPlus />
-                        <span className="hidden lg:inline">Add Section</span>
-                    </Button>
+
                 </div>
             </div>
+
             <TabsContent
                 value="outline"
                 className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"

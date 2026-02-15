@@ -2,24 +2,17 @@
 
 import * as React from "react"
 import {
-    IconCamera,
-    IconChartBar,
     IconDashboard,
     IconDatabase,
-    IconFileAi,
-    IconFileDescription,
     IconFileWord,
-    IconFolder,
     IconHelp,
     IconInnerShadowTop,
     IconListDetails,
     IconReport,
     IconSearch,
     IconSettings,
-    IconUsers,
 } from "@tabler/icons-react"
 
-import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
@@ -32,6 +25,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import Image from "next/image"
 
 const data = {
     user: {
@@ -44,11 +38,6 @@ const data = {
             title: "Dashboard",
             url: "/dashboard",
             icon: IconDashboard,
-        },
-        {
-            title: "Live Feed",
-            url: "/feed",
-            icon: IconListDetails,
         },
     ],
     navSecondary: [
@@ -97,9 +86,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             asChild
                             className="data-[slot=sidebar-menu-button]:!p-1.5"
                         >
-                            <a href="#">
-                                <IconInnerShadowTop className="!size-5" />
-                                <span className="text-base font-semibold">Alersense</span>
+                            <a href="/">
+                                <Image src="/alersense-logo-black.svg" alt="alersense logo" width={35} height={35} />
+                                <span className="text-lg font-semibold ">Alersense</span>
                             </a>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -107,7 +96,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarHeader>
             <SidebarContent>
                 <NavMain items={data.navMain} />
-                {/* <NavDocuments items={data.documents} /> */}
                 <NavSecondary items={data.navSecondary} className="mt-auto" />
             </SidebarContent>
             <SidebarFooter>
