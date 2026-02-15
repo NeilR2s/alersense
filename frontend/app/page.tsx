@@ -5,7 +5,8 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-
+import { redirect } from 'next/dist/server/api-utils';
+import { useRouter } from 'next/navigation'
 
 // --- Placeholder Components ---
 
@@ -30,7 +31,13 @@ const ImagePlaceholder = ({ className, delay = 0 }: { className?: string; delay?
 // --- Main Landing Page Component ---
 
 export default function HublotLanding() {
+
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const router = useRouter();
+
+    const handleRedirect = () => {
+        router.push('/dashboard'); // Redirects the user to the '/new-destination' route
+    };
 
     // Animation variants
     const fadeUp: Variants = {
@@ -88,7 +95,7 @@ export default function HublotLanding() {
                             Menu
                         </button>
                         <div className="hidden lg:flex items-center gap-4">
-                            <button className="px-6 py-2 rounded-full bg-black text-white text-sm font-medium hover:bg-zinc-800 transition-all">
+                            <button className="px-6 py-2 rounded-full bg-black text-white text-md font-normal hover:bg-zinc-800 transition-all" onClick={handleRedirect}>
                                 Sign in
                             </button>
                         </div>
@@ -169,6 +176,10 @@ export default function HublotLanding() {
                             <div>
                                 <div className="text-2xl font-bold text-black">3</div>
                                 <div className="text-xs text-zinc-500 font-medium mt-1">Biometric Sensors</div>
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-black">70%</div>
+                                <div className="text-xs text-zinc-500 font-medium mt-1">AI Detection Guarantee</div>
                             </div>
                         </motion.div>
 
