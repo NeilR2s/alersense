@@ -1,7 +1,9 @@
-from flask import Flask, request, jsonify
 import logging
-from flask_socketio import SocketIO, emit
 
+from config import settings
+from flask import Flask, jsonify, request
+from flask_socketio import SocketIO, disconnect, emit, join_room
+from werkzeug.exceptions import UnsupportedMediaType
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -11,37 +13,75 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(
+    app,
+    cors_allowed_origins=settings.allowed_origins,
+    max_http_buffer_size=settings.max_http_buffer_size,
+)
+
+
+@app.route("/health")
+def health_check():
+    return jsonify({"status": "healthy"}), 200
 
 
 @app.route("/api/telemetry", methods=["POST"])
 def receive_telemetry():
     try:
-        data = request.get_json()
+        if not request.is_json:
+            raise UnsupportedMediaType("Request must be application/json")
+        data = request.get_json(silent=True)
 
-        logger.info(f"Received Data: {data}")
+        if data is None:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
 
-        status = "Attentive"
-        if data.get("inattentive"):
-            status = "Inattentive"
+        logger.info("Recieved telemetry data")
+
+        status = "Inattentive" if data.get("inattentive") else "Attentive"
 
         return jsonify(
             {"message": "Data received successfully", "server_status": status}
         ), 200
-
+    except UnsupportedMediaType as e:
+        logger.warning(f"Unsupported Media Type: {e}")
+        return jsonify({"error": "Request Content-Type must be application/json"}), 415
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        logger.error(f"Unexpected error in /api/telemetry: {e}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
-@socketio.on("inference_data")
-def handle_inference_data(data):
-    emit("inference_data", data, broadcast=True)
+@socketio.on(settings.event_connect)
+def handle_connect(auth):
+    if not auth or "token" not in auth:
+        logger.warning("Connection rejected: No auth token provided")
+        raise ConnectionRefusedError("Authentication required")
+
+    if auth.get("token") == settings.camera_token:
+        logger.info("Camera device connected")
+    elif auth.get("token") == settings.viewer_token:
+        logger.info("Viewer client connected")
+        join_room(settings.viewer_room)
+    else:
+        logger.warning("Connection rejected: Invalid token")
+        return False
+
+
+@socketio.on(settings.event_disconnect)
+def handle_disconnect():
+    disconnect(request.sid)
+    logger.info("Client disconnected.")
+
 
 @socketio.on("video_feed")
-def handle_frame_buffer(buffer):
-    emit("video_feed", buffer, broadcast=True)
+def handle_video_feed(payload):
+    if not isinstance(payload, dict):
+        logger.warning("Invalid video feed payload")
+        return
+    emit("video_feed", payload, to=settings.viewer_room)
+
 
 if __name__ == "__main__":
-    socketio.run(app, port=8080, debug=False)
     logger.info("Application Starup Complete.")
+    socketio.run(app, port=8080, debug=False)
