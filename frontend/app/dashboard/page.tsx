@@ -48,7 +48,7 @@ export default function Page() {
             setIsConnected(false);
         }
 
-        const onVideoFeed = (data) => {
+        const onVideoFeed = (data: any) => {
             console.log(data.image)
             const blob = new Blob([data.image], { type: "image/jpeg" });
             const url = URL.createObjectURL(blob);
