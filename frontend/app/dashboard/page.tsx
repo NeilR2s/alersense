@@ -96,7 +96,7 @@ export default function Page() {
                             )}
                             <img
                                 ref={imageRef}
-                                alt="Live Telemetry Feed"
+                                alt=""
                                 className="h-full w-full object-contain"
                             />
                         </div>
