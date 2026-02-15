@@ -30,28 +30,29 @@ interface StreamData {
 export default function Page() {
     const [detections, setDetections] = useState<Detection[]>([]);
     const [isConnected, setIsConnected] = useState(false);
-    
+
     const imageRef = useRef<HTMLImageElement>(null);
     const socketRef = useRef<Socket | null>(null);
 
-    useEffect(() => {
-        socketRef.current = io('http://localhost:8080');
 
-        socketRef.current.on('connect', () => {
+    useEffect(() => {
+        // socketRef.current = io(process.env.SERVER_URL, { auth: { token: process.env.VIEWER_TOKEN } });
+        socketRef.current = io(process.env.NEXT_PUBLIC_SERVER_URL, { auth: { token: process.env.NEXT_PUBLIC_VIEWER_TOKEN } });
+
+        const onConnect = () => {
             console.log('Connected to Flask Stream');
             setIsConnected(true);
-        });
-
-        socketRef.current.on('disconnect', () => {
-            console.log('Disconnected');
+        }
+        const onDisconnect = () => {
+            console.log('Disconnected to Flask Stream');
             setIsConnected(false);
-        });
+        }
 
-        socketRef.current.on('video_feed', (arrayBuffer) => {
-            console.log(arrayBuffer)
-            const blob = new Blob([arrayBuffer], { type: "image/jpeg" });
+        const onVideoFeed = (data) => {
+            console.log(data.image)
+            const blob = new Blob([data.image], { type: "image/jpeg" });
             const url = URL.createObjectURL(blob);
-            if (imageRef.current){
+            if (imageRef.current) {
                 if (imageRef.current.src) {
                     URL.revokeObjectURL(imageRef.current.src);
                 }
@@ -61,17 +62,20 @@ export default function Page() {
                 console.error("Attempting to mutate a null HTMLImageElement reference")
                 return;
             }
+        }
 
-        });
-
-        socketRef.current.on('inference_data', (data) => {
-            const boxes = data.detections;
-            setDetections(boxes);
-        });
+        socketRef.current.on('connect', onConnect);
+        socketRef.current.on('disconnect', onDisconnect);
+        socketRef.current.on('video_feed', onVideoFeed);
 
         // Cleanup on unmount
         return () => {
-            socketRef.current?.disconnect();
+            if (socketRef.current) {
+                socketRef.current.off('connect', onConnect);
+                socketRef.current.off('disconnect', onDisconnect);
+                socketRef.current.off('video_feed', onVideoFeed);
+                socketRef.current.disconnect();
+            }
         };
     }, []);
     return (
