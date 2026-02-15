@@ -1,10 +1,13 @@
 import logging
+import eventlet
 
 from config import settings
 from flask import Flask, jsonify, request
 from flask_socketio import SocketIO, disconnect, emit, join_room
 from werkzeug.exceptions import UnsupportedMediaType
 
+
+eventlet.monkey_patch()
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s | %(levelname)s : %(message)s",
@@ -17,7 +20,11 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 socketio = SocketIO(
     app,
-    cors_allowed_origins=settings.allowed_origins,
+    cors_allowed_origins=[
+        # "http://localhost:8000",
+        # "http://localhost:3000",
+        settings.allowed_origins
+    ],
     max_http_buffer_size=settings.max_http_buffer_size,
 )
 
@@ -70,7 +77,7 @@ def handle_connect(auth):
 
 @socketio.on(settings.event_disconnect)
 def handle_disconnect():
-    disconnect(request.sid)
+    # disconnect(request.sid)
     logger.info("Client disconnected.")
 
 
