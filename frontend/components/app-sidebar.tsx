@@ -26,12 +26,14 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import Image from "next/image"
+import { auth } from "@/lib/firebase"
+
 
 const data = {
     user: {
-        name: "Paulin Aviso",
-        email: "paulinaviso@gmail.com",
-        avatar: "/avatars/shadcn.jpg",
+        name: auth.currentUser?.displayName,
+        email: auth.currentUser?.email,
+        avatar: auth.currentUser?.photoURL,
     },
     navMain: [
         {
@@ -77,6 +79,7 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+    
     return (
         <Sidebar collapsible="offcanvas" {...props}>
             <SidebarHeader>

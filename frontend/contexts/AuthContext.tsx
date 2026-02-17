@@ -3,7 +3,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { onAuthStateChanged, getRedirectResult, signOut, signInWithRedirect, User } from "firebase/auth" //
 import { auth, googleProvider } from "@/lib/firebase"
-import { useRouter } from "next/navigation"
+import { useRouter, redirect } from "next/navigation"
+import { toast } from "sonner"
+
 
 interface AuthContextType {
     user: User | null;
@@ -22,21 +24,23 @@ export const AuthContextInstance = createContext<AuthContextType | undefined>(un
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
+    const router= useRouter();
 
     // dedicated effect for handling the login redirect result
     useEffect(() => {
         const handleRedirect = async () => {
             try {
                 const result = await getRedirectResult(auth);
-                if (result?.user) {
-                    router.push("/dashboard");
+                if (result) {
+                    setUser(result.user)
+                    console.log(`user auth object ${user}`)
+                    // router.push("/dashboard");
                 }
             } catch (error) {
                 console.error("Redirect login failed", error);
-                await signOut(auth); // Ensure clean state
-                router.push("/"); // Back to login/home
-                alert("Login failed. Please try again.");
+                await signOut(auth); 
+                // router.push("/"); 
+                toast("Login failed. Please try again.")
             }
         };
 
@@ -45,7 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     //  tracking auth state changes
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             setUser(currentUser);
             setLoading(false);
         });
@@ -54,11 +58,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, []);
 
 
-    const login = () => signInWithRedirect(auth, googleProvider);
+    const login = async () => { 
+        await signInWithRedirect(auth, googleProvider);
+    }
     return (
         <AuthContextInstance.Provider value={{ user, loading, login }
         }>
-            {children}
+            {!loading && children}
         </AuthContextInstance.Provider>
     );
 

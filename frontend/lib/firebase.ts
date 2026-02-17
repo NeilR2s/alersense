@@ -1,5 +1,7 @@
 // https://firebase.google.com/docs/auth/web/google-signin#web
 // https://firebase.google.com/docs/auth/web/redirect-best-practices
+
+
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth"
 import { GoogleAuthProvider } from "firebase/auth";
@@ -16,12 +18,15 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const googleProvider = new GoogleAuthProvider()
-googleProvider.addScope("https://www.googleapis.com/auth/contacts.readonly");
-googleProvider.addScope("profile");
-googleProvider.addScope("email");
 googleProvider.setCustomParameters({
-    "login_hint": "user@example.com"
+  prompt: "select_account"
 });
+// googleProvider.addScope("https://www.googleapis.com/auth/contacts.readonly");
+// googleProvider.addScope("profile");
+// googleProvider.addScope("email");
+// googleProvider.setCustomParameters({
+    // "login_hint": "user@example.com"
+// });
 export const auth = getAuth(app);
 auth.useDeviceLanguage();
 
