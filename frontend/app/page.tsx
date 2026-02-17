@@ -1,14 +1,10 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { redirect } from 'next/dist/server/api-utils';
-import { useRouter } from 'next/navigation'
-
-// --- Placeholder Components ---
+import { useAuth } from '@/contexts/AuthContext';
+import { log } from 'console';
 
 // A shimmer effect placeholder for images
 const ImagePlaceholder = ({ className, delay = 0 }: { className?: string; delay?: number }) => (
@@ -32,12 +28,9 @@ const ImagePlaceholder = ({ className, delay = 0 }: { className?: string; delay?
 
 export default function HublotLanding() {
 
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const router = useRouter();
 
-    const handleRedirect = () => {
-        router.push('/dashboard'); // Redirects the user to the '/new-destination' route
-    };
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const { login } = useAuth()
 
     // Animation variants
     const fadeUp: Variants = {
@@ -95,7 +88,7 @@ export default function HublotLanding() {
                             Menu
                         </button>
                         <div className="hidden lg:flex items-center gap-4">
-                            <button className="px-6 py-2 rounded-full bg-black text-white text-md font-normal hover:bg-zinc-800 transition-all" onClick={handleRedirect}>
+                            <button className="px-6 py-2 rounded-full bg-black text-white text-md font-normal hover:bg-zinc-800 transition-all" onClick={() => login()} >
                                 Sign in
                             </button>
                         </div>

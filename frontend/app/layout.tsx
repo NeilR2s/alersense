@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Google_Sans } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 
 const googleSans = Google_Sans({
@@ -25,7 +26,9 @@ export default function RootLayout({
             <body
                 className={`${googleSans.className} antialiased`}
             >
-                {children}
+                <AuthProvider>
+                    {children}
+                </AuthProvider>
             </body>
         </html>
     );
