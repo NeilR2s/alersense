@@ -12,7 +12,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: () => Promise<void>;
-    logout: () => Promise<void>;
+    logout: () => void;
 }
 
 interface AuthProviderProps {
