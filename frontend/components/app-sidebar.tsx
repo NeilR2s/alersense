@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sidebar"
 import Image from "next/image"
 import { auth } from "@/lib/firebase"
+import { generateUserProfile } from "@/lib/utils"
 
 
 const data = {
@@ -102,7 +103,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <NavSecondary items={data.navSecondary} className="mt-auto" />
             </SidebarContent>
             <SidebarFooter>
-                <NavUser user={data.user} />
+                <NavUser user={generateUserProfile(auth)} />
             </SidebarFooter>
         </Sidebar>
     )

@@ -43,6 +43,7 @@ export function NavUser({
   const { isMobile } = useSidebar()
   const { logout } = useAuth();
 
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -102,7 +103,7 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <IconLogout onClick={() => auth.signOut()} />
+              <IconLogout onClick={() => logout()} />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

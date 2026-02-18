@@ -73,6 +73,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const logout = () => {
         signOut(auth);
+        router.push("/")
     }
     return (
         <AuthContextInstance.Provider value={{ user, loading, login, logout }
