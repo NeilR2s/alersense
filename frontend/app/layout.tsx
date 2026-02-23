@@ -29,7 +29,7 @@ export default function RootLayout({
             >
                 <AuthProvider>
                     {children}
-                    <Toaster/>
+                    <Toaster />
                 </AuthProvider>
             </body>
         </html>

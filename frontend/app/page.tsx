@@ -4,7 +4,6 @@ import { motion, Variants } from 'framer-motion';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-import { log } from 'console';
 
 // A shimmer effect placeholder for images
 const ImagePlaceholder = ({ className, delay = 0 }: { className?: string; delay?: number }) => (
@@ -24,9 +23,8 @@ const ImagePlaceholder = ({ className, delay = 0 }: { className?: string; delay?
     </div>
 );
 
-// --- Main Landing Page Component ---
 
-export default function HublotLanding() {
+export default function AlersenseLanding() {
 
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -71,7 +69,7 @@ export default function HublotLanding() {
                     </div>
 
                     {/* Desktop Links */}
-                    <div className="hidden lg:flex items-center gap-8 text-sm font-medium text-white/80 absolute left-1/3 transform -translate-x-1/2">
+                    <div className="ml-10 hidden lg:flex items-center gap-8 text-sm font-medium text-white/80 absolute left-1/3 transform -translate-x-1/2">
                         {['Home', 'About Us', 'Products'].map((link) => (
                             <a key={link} href="#" className="hover:text-white transition-colors uppercase tracking-wide text-xs">
                                 {link}
@@ -96,19 +94,18 @@ export default function HublotLanding() {
                 </nav>
 
                 {/* --- Left Column: Visual/Hero Image --- */}
-                <div className="relative w-full lg:w-[55%] h-[50vh] lg:h-screen bg-black overflow-hidden">
+                <div className="relative w-full lg:w-[55%] lg:h-screen bg-black overflow-hidden">
                     {/* Simulating the complex mechanical watch background */}
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-800 via-black to-black opacity-80" />
 
                     <ImagePlaceholder className="w-full h-full opacity-60 " />
 
-                    {/* Overlay gradient to ensure text readability if needed (though mostly graphic here) */}
+                    {/* Overlay gradient */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-black/20 pointer-events-none" />
                 </div>
 
                 {/* --- Right Column: Content --- */}
-                {/* The negative margin creates the overlap effect seen in the reference */}
-                <div className="w-full lg:w-[45%] bg-white relative z-10 flex flex-col justify-center px-6 py-12 lg:p-16 rounded-t-4xl lg:rounded-t-none lg:rounded-l-4xl shadow-2xl shadow-black/50">
+                <div className="w-full lg:w-[45%] lg:h-screen bg-white relative z-10 flex flex-col justify-center px-6 py-12 lg:p-16 rounded-t-4xl lg:rounded-t-none lg:rounded-l-4xl shadow-2xl shadow-black/50">
 
                     <div className="max-w-xl mx-auto lg:mx-0 flex flex-col h-full justify-center">
 
@@ -119,7 +116,7 @@ export default function HublotLanding() {
                             viewport={{ once: true }}
                             custom={1}
                             variants={fadeUp}
-                            className="text-4xl lg:text-6xl font-semibold leading-[1.1] tracking-tight mb-6"
+                            className="mt-25 text-3xl lg:text-5xl font-medium leading-[1.1] tracking-tight mb-6"
                         >
                             Attention is all you need.
                         </motion.h1>
