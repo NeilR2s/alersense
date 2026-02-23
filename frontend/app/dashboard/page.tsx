@@ -9,8 +9,9 @@ import {
 } from "@/components/ui/sidebar"
 import { useEffect, useState, useRef } from 'react';
 import io, { Socket } from 'socket.io-client';
-
+import { useAuth } from "@/contexts/AuthContext";
 import data from "./data.json"
+import AlersenseLanding from "../page";
 
 
 
@@ -26,11 +27,10 @@ interface StreamData {
 }
 
 export default function Page() {
+    // const { user } = useAuth();
     const [isConnected, setIsConnected] = useState(false);
-
     const imageRef = useRef<HTMLImageElement>(null);
     const socketRef = useRef<Socket | null>(null);
-
 
     useEffect(() => {
         socketRef.current = io(process.env.NEXT_PUBLIC_SERVER_URL, { auth: { token: process.env.NEXT_PUBLIC_VIEWER_TOKEN } });
@@ -75,6 +75,11 @@ export default function Page() {
             }
         };
     }, []);
+
+    // if (!user) {
+    //     router.push("/")
+    //     return <AlersenseLanding />;
+    // }
     return (
         <SidebarProvider
             style={{

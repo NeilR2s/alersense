@@ -50,14 +50,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
             });
         }
     }
+    useEffect(() => {
+        // If Firebase confirms there is no user, kick them out
+        if (!user) {
+            router.push("/");
+        }
+    }, [user, loading, router]);
+
 
     const logout = async () => {
         try {
             await signOut(auth);
-            setUser(null);
             toast.success("Signed out successfully.", { position: "top-center" });
-            router.replace("/");
-            router.refresh();
+            // setUser(null);
+            // router.replace("/");
+            // router.refresh();
         } catch (error) {
             toast.error("Failed to sign out.", { position: "top-center" });
         }
