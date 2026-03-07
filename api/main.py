@@ -39,7 +39,9 @@ def receive_telemetry():
     try:
         if not request.is_json:
             raise UnsupportedMediaType("Request must be application/json")
+        logger.info(f"Request: {request}")
         data = request.get_json(silent=True)
+        logger.info(f"data: {data}")
 
         if data is None:
             return jsonify({"error": "Invalid or missing JSON payload"}), 400
