@@ -9,9 +9,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useEffect, useState, useRef } from 'react';
 import io, { Socket } from 'socket.io-client';
-import { useAuth } from "@/contexts/AuthContext";
 import data from "./data.json"
-import AlersenseLanding from "../page";
 
 
 
@@ -76,10 +74,6 @@ export default function Page() {
         };
     }, []);
 
-    // if (!user) {
-    //     router.push("/")
-    //     return <AlersenseLanding />;
-    // }
     return (
         <SidebarProvider
             style={{
