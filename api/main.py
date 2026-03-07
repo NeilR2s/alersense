@@ -45,12 +45,9 @@ def receive_telemetry():
             return jsonify({"error": "Invalid or missing JSON payload"}), 400
 
         logger.info("Recieved telemetry data")
+        socketio.emit("telemetry_update", data)
+        return jsonify({"message": "Data received successfully", "payload": data}), 200
 
-        status = "Inattentive" if data.get("inattentive") else "Attentive"
-
-        return jsonify(
-            {"message": "Data received successfully", "server_status": status}
-        ), 200
     except UnsupportedMediaType as e:
         logger.warning(f"Unsupported Media Type: {e}")
         return jsonify({"error": "Request Content-Type must be application/json"}), 415
