@@ -1,7 +1,17 @@
 #include <Wire.h>
 #include "MAX30105.h"
 #include "heartRate.h"
-#include "esp_wifi.h"
+#include "WiFi.h"
+#include "HTTPClient.h"
+#include "WiFiClientSecure.h"
+
+/*
+Network Config
+*/
+const char *ssid = "";
+const char *password = "";
+const char *serverName = "https://alersense-ghbxgzesfva7cfd0.southeastasia-01.azurewebsites.net/api/telemetry";
+const String deviceID = "ALRSNS_01";
 
 /*
 Arduino Hardware Configs
@@ -283,6 +293,16 @@ void setup()
     particleSensor.setPulseAmplitudeIR(0x1F);
     particleSensor.setPulseAmplitudeGreen(0);
 
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+    Serial.print("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("\n[INFO] Connected to WiFi network");
+
     calibrateBaseline();
     Serial.println("[INFO] Application startup complete. Entering main loop.");
 }
@@ -324,20 +344,66 @@ void loop()
         bool hrDrop = hrPercentDiff < THRESH_HR_PERCENT;
         bool gsrDrop = gsrPercentDiff < THRESHOLD_GSR_PERCENT;
 
-        if (hrDrop && gsrDrop)
-        {
-            Serial.print("[STATUS] Inattentive");
-        }
-        else
-        {
-            Serial.print("[STATUS] Attentive");
-        }
+        String status = (hrDrop && gsrDrop) ? "Inattentive" : "Attentive";
 
-        Serial.print(" | HR Diff: ");
-        Serial.print(hrPercentDiff);
-        Serial.print("% | GSR Diff: ");
-        Serial.print(gsrPercentDiff);
-        Serial.println("%");
+        // Serial.print(" | HR Diff: ");
+        // Serial.print(hrPercentDiff);
+        // Serial.print("% | GSR Diff: ");
+        // Serial.print(gsrPercentDiff);
+        // Serial.println("%");
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            // Use a pointer for WiFiClientSecure to manage memory manually
+            WiFiClientSecure *client = new WiFiClientSecure;
+
+            if (client)
+            {
+                client->setInsecure(); // <--- This allows HTTPS without a Root CA certificate
+
+                HTTPClient http;
+                // Pass the secure client into the begin method
+                if (http.begin(*client, serverName))
+                {
+                    http.addHeader("Content-Type", "application/json");
+
+                    // Your manual JSON string
+                    String jsonPayload = "{\"device_id\":\"" + deviceID + "\",";
+                    jsonPayload += "\"status\":\"" + status + "\",";
+                    jsonPayload += "\"hr_diff\":" + String(hrPercentDiff) + ",";
+                    jsonPayload += "\"gsr_diff\":" + String(gsrPercentDiff) + "}";
+
+                    int httpResponseCode = http.POST(jsonPayload);
+
+                    if (httpResponseCode > 0)
+                    {
+                        Serial.printf("HTTP Response code: %d\n", httpResponseCode);
+                    }
+                    else
+                    {
+                        Serial.printf("Error: %s\n", http.errorToString(httpResponseCode).c_str());
+                    }
+                    http.end();
+                }
+                delete client; // Free memory
+            }
+        }
+        // if(WiFi.status() == WL_CONNECTED){
+        //     HTTPClient http;
+        //     http.begin(serverName);
+        //     http.addHeader("Content-Type", "application/json");
+
+        //     Serial.print("Sending Payload: ");
+        //     Serial.println(jsonPayload);
+        //     int httpResponseCode = http.POST(jsonPayload);
+
+        //     if (httpResponseCode <= 0) {
+        //         Serial.print("HTTP Error code: ");
+        //         Serial.println(httpResponseCode);
+        //     }
+        //     http.end();
+        // } else {
+        //     Serial.println("WiFi Disconnected. Cannot send telemetry.");
+        // }
 
         float currentAlpha = (currentAdjustedGs > systemBaseline.gsrAdjusted) ? GSR_ALPHA_UP : GSR_ALPHA_DOWN;
         systemBaseline.gsrAdjusted = (currentAdjustedGs * currentAlpha) + (systemBaseline.gsrAdjusted * (1.0 - currentAlpha));
@@ -349,4 +415,5 @@ void loop()
         Serial.print(" | GSR ADC: ");
         Serial.println(currentAdjustedGs);
     }
+    delay(100);
 }
