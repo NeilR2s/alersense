@@ -11,6 +11,7 @@ import {
     IconReport,
     IconSearch,
     IconSettings,
+    IconPhotoVideo
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -41,6 +42,11 @@ const data = {
             title: "Dashboard",
             url: "/dashboard",
             icon: IconDashboard,
+        },
+        {
+            title: "Video Feed",
+            url: "/stream",
+            icon: IconPhotoVideo,
         },
     ],
     navSecondary: [

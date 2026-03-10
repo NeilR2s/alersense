@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/sidebar"
 import { useEffect, useState, useRef } from 'react';
 import io, { Socket } from 'socket.io-client';
-import data from "./data.json"
 
 
 
@@ -25,6 +24,7 @@ interface StreamData {
 }
 
 export default function Page() {
+    // const { user } = useAuth();
     const [isConnected, setIsConnected] = useState(false);
     const imageRef = useRef<HTMLImageElement>(null);
     const socketRef = useRef<Socket | null>(null);
@@ -84,16 +84,20 @@ export default function Page() {
             <SidebarInset>
                 <SiteHeader />
                 <div className="flex flex-1 flex-col">
+                    {/* Stream Container */}
 
-
-                    <div className="@container/main flex flex-1 flex-col">
-                        <div className="flex flex-col gap-4 py-6 md:gap-6">
-                            <h1 className="px-4 text-2xl font-semibold tracking-tight lg:px-6">
-                                Telemetry
-                            </h1>
-                            <div className="px-4 lg:px-6">
-                                <DataTable data={data} />
-                            </div>
+                    <div className="flex flex-col items-center justify-center  p-4">
+                        <div className="relative aspect-video w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-xl">
+                            {!isConnected && (
+                                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 text-zinc-500 animate-pulse">
+                                    <p className="text-sm font-medium">Connecting to server...</p>
+                                </div>
+                            )}
+                            <img
+                                ref={imageRef}
+                                alt=""
+                                className="h-full w-full object-contain"
+                            />
                         </div>
                     </div>
 
