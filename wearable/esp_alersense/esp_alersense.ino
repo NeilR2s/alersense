@@ -11,7 +11,7 @@ Network Config
 const char *ssid = "";
 const char *password = "";
 const char *serverName = "https://alersense-ghbxgzesfva7cfd0.southeastasia-01.azurewebsites.net/api/telemetry";
-const String deviceID = "ALRSNS_01";
+const String deviceID = "S-0001";
 
 /*
 ESP Hardware Configs
@@ -142,7 +142,6 @@ float computeHeartRate(long irValue)
     static float beatsPerMinute = 0;
     static int beatAvg = 0;
 
-    // NEW: Track how many valid beats we've seen
     static byte samplesRecorded = 0;
 
     programAssert(irValue >= 0, "IR value cannot be negative");
@@ -161,13 +160,11 @@ float computeHeartRate(long irValue)
                 rates[rateSpot++] = (byte)beatsPerMinute;
                 rateSpot %= RATE_SIZE;
 
-                // NEW: Increment until we hit the array size
                 if (samplesRecorded < RATE_SIZE)
                 {
                     samplesRecorded++;
                 }
 
-                // NEW: Only calculate and return an average IF the array is full
                 if (samplesRecorded == RATE_SIZE)
                 {
                     beatAvg = 0;
@@ -179,7 +176,6 @@ float computeHeartRate(long irValue)
                 }
                 else
                 {
-                    // Not full yet, return 0 to force calibration to keep waiting
                     beatAvg = 0;
                 }
             }
@@ -366,36 +362,55 @@ void setup()
     particleSensor.setPulseAmplitudeIR(0x24);
     particleSensor.setPulseAmplitudeGreen(0);
 
+    Serial.println("[INFO] Initializing WiFi...");
+
     WiFi.mode(WIFI_STA);
-    WiFi.disconnect(true, true);
     WiFi.persistent(false);
-    delay(2000);
-    WiFi.begin(ssid, password, 0, NULL, true);
-    Serial.print("Connecting to WiFi");
-    unsigned long wifiStart = millis();
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        if (millis() - wifiStart > 30000)
-        {
-            Serial.print("\n[ERROR] WiFi failed. Reason code: ");
-            Serial.println(WiFi.status());
-            break;
+    WiFi.disconnect(true, true);
+    delay(200);
+
+    const int MAX_RETRIES = 8;
+    const unsigned long CONNECT_TIMEOUT_MS = 15000;
+
+    bool wifiConnected = false;
+
+    for (int attempt = 1; attempt <= MAX_RETRIES && !wifiConnected; attempt++) {
+        Serial.printf("[INFO] WiFi attempt %d/%d to SSID: %s\n", attempt, MAX_RETRIES, ssid);
+
+        WiFi.begin(ssid, password);
+        WiFi.setTxPower(WIFI_POWER_8_5dBm);  // try up to WIFI_POWER_11dBm if need more range, but WIFI_POWER_8_5dBm worked in the vid demo.
+        delay(1000);                           
+
+        unsigned long startTime = millis();
+        while (WiFi.status() != WL_CONNECTED && millis() - startTime < CONNECT_TIMEOUT_MS) {
+            delay(500);
+            Serial.print(".");
+            if (millis() % 2000 < 100) Serial.printf(" (status=%d)", WiFi.status());
         }
-        delay(WIFI_CONNECTION_DELAY);
-        Serial.print(".");
+
+        if (WiFi.status() == WL_CONNECTED) {
+            wifiConnected = true;
+        } else {
+            Serial.println("\n[WARN] Timeout - disconnecting and retrying...");
+            WiFi.disconnect(true);
+            delay(2000);
+        }
     }
 
-    if (WiFi.status() == WL_CONNECTED)
-    {
-        Serial.println("\n[INFO] Connected to WiFi network!");
+    if (wifiConnected) {
+        WiFi.setSleep(false);  
+        Serial.println("\n[INFO] Connected to WiFi!");
         Serial.print("[INFO] IP Address: ");
         Serial.println(WiFi.localIP());
-    }
-    else
-    {
-        Serial.println("\n[ERROR] Halting program. Could not connect to WiFi.");
-        while (1)
-            ; // Halt
+        Serial.print("[INFO] RSSI: ");
+        Serial.print(WiFi.RSSI());
+        Serial.println(" dBm");
+    } else {
+        Serial.println("\n[ERROR] Could not connect after all retries. Halting.");
+        while (1) {
+            delay(1000);
+            Serial.print(".");
+        }
     }
 
     telemetryQueue = xQueueCreate(10, sizeof(TelemetryPayload));
