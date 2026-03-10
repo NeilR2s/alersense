@@ -31,8 +31,6 @@ import {
     IconGripVertical,
     IconLayoutColumns,
     IconLoader,
-    IconPlus,
-    IconTrendingUp,
 } from "@tabler/icons-react"
 import {
     flexRender,
@@ -49,30 +47,11 @@ import {
     type SortingState,
     type VisibilityState,
 } from "@tanstack/react-table"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
-import { toast } from "sonner"
 import { z } from "zod"
 
-import { useIsMobile } from "@/hooks/use-mobile"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-    ChartContainer,
-    ChartTooltip,
-    ChartTooltipContent,
-    type ChartConfig,
-} from "@/components/ui/chart"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-    Drawer,
-    DrawerClose,
-    DrawerContent,
-    DrawerDescription,
-    DrawerFooter,
-    DrawerHeader,
-    DrawerTitle,
-    DrawerTrigger,
-} from "@/components/ui/drawer"
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -81,7 +60,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
     Select,
@@ -90,7 +68,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import {
     Table,
     TableBody,
@@ -102,21 +79,19 @@ import {
 import {
     Tabs,
     TabsContent,
-    TabsList,
-    TabsTrigger,
 } from "@/components/ui/tabs"
 
 export const schema = z.object({
-    id: z.number(),
-    deviceId: z.string(),
-    name: z.string(),
-    wearableStatus: z.string(),
-    hrChange: z.string(),
-    gsrChange: z.string(),
+    device_id: z.string(),
+    hr: z.number(),
+    skt: z.number(),
+    gsr: z.number(),
+    gsr_diff: z.number(),
+    hr_diff: z.number(),
+    status: z.string(),
 })
 
-// Create a separate component for the drag handle
-function DragHandle({ id }: { id: number }) {
+function DragHandle({ id }: { id: string }) {
     const { attributes, listeners } = useSortable({
         id,
     })
@@ -139,7 +114,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     {
         id: "drag",
         header: () => null,
-        cell: ({ row }) => <DragHandle id={row.original.id} />,
+        cell: ({ row }) => <DragHandle id={row.original.device_id} />,
     },
     {
         id: "select",
@@ -168,59 +143,73 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         enableHiding: false,
     },
     {
-        accessorKey: "Device ID",
+        accessorKey: "device_id",
         header: "Device ID",
         cell: ({ row }) => (
             <div className="w-0.5">
                 <Badge variant="outline" className="text-muted-foreground px-1.5">
-                    {row.original.deviceId}
+                    {row.original.device_id}
                 </Badge>
             </div>
         ),
     },
     {
-        accessorKey: "Name",
-        header: "Name",
-        cell: ({ row }) => (
-            <div className="w-15">
-                {row.original.name}
-            </div>
-        ),
-    },
-    {
-        accessorKey: "Status",
+        accessorKey: "status",
         header: "Status",
-        cell: ({ row }) => (
-            <Badge variant="outline" className="text-muted-foreground px-1.5">
-                {row.original.wearableStatus === "Active" ? (
-                    <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
-                ) : row.original.wearableStatus === "Inactive" ? (
-                    <IconCircleCheckFilled className="fill-red-500 dark:fill-red-400" />
-                ) : (
-                    <IconLoader />
-                )}
-                {row.original.wearableStatus}
-            </Badge>
-
-        ),
+        cell: ({ row }) => {
+            const status = row.original.status;
+            return (
+                <Badge variant="outline" className="text-muted-foreground px-1.5 gap-1">
+                    {status === "Attentive" ? (
+                        <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 size-4" />
+                    ) : status === "Inattentive" ? (
+                        <IconCircleCheckFilled className="fill-red-500 dark:fill-red-400 size-4" />
+                    ) : (
+                        <IconLoader className="size-4" />
+                    )}
+                    {status}
+                </Badge>
+            )
+        },
     },
     {
-        accessorKey: "HR Change",
-        header: "HR Change",
-        cell: ({ row }) => (
-            <div className={`w-1 ${row.original.gsrChange[0] === "-" ? "text-red-500" : row.original.gsrChange[0] === "+" ? "text-green-500" : ""}`}>
-                {row.original.hrChange}
-            </div>
-        ),
+        accessorKey: "hr",
+        header: "HR",
+        cell: ({ row }) => <div>{row.original.hr}</div>,
     },
     {
-        accessorKey: "GSR Change",
-        header: "GSR Change",
-        cell: ({ row }) => (
-            <div className={`w-1 ${row.original.gsrChange[0] === "-" ? "text-red-500" : row.original.gsrChange[0] === "+" ? "text-green-500" : ""}`}>
-                {row.original.gsrChange}
-            </div>
-        ),
+        accessorKey: "skt",
+        header: "SKT (°C)",
+        cell: ({ row }) => <div>{row.original.skt}</div>,
+    },
+    {
+        accessorKey: "gsr",
+        header: "GSR",
+        cell: ({ row }) => <div>{row.original.gsr}</div>,
+    },
+    {
+        accessorKey: "hr_diff",
+        header: "HR Diff",
+        cell: ({ row }) => {
+            const diff = row.original.hr_diff;
+            return (
+                <div className={`w-1 ${diff < 0 ? "text-red-500" : diff > 0 ? "text-green-500" : ""}`}>
+                    {diff > 0 ? `+${diff}` : diff}
+                </div>
+            )
+        },
+    },
+    {
+        accessorKey: "gsr_diff",
+        header: "GSR Diff",
+        cell: ({ row }) => {
+            const diff = row.original.gsr_diff;
+            return (
+                <div className={`w-1 ${diff < 0 ? "text-red-500" : diff > 0 ? "text-green-500" : ""}`}>
+                    {diff > 0 ? `+${diff}` : diff}
+                </div>
+            )
+        },
     },
     {
         id: "actions",
@@ -250,7 +239,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
 
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
     const { transform, transition, setNodeRef, isDragging } = useSortable({
-        id: row.original.id,
+        id: row.original.device_id, // Changed to use device_id
     })
 
     return (
@@ -296,9 +285,28 @@ export function DataTable({
         useSensor(TouchSensor, {}),
         useSensor(KeyboardSensor, {})
     )
+    React.useEffect(() => {
+        setData((prevData) => {
+            // Create a quick lookup map of the incoming fresh data
+            const incomingMap = new Map(initialData.map(item => [item.device_id, item]));
+
+            // Update existing items in their current dragged order
+            const mergedData = prevData.map(item => {
+                if (incomingMap.has(item.device_id)) {
+                    const updatedItem = incomingMap.get(item.device_id)!;
+                    incomingMap.delete(item.device_id); // Remove from map once processed
+                    return updatedItem;
+                }
+                return item;
+            });
+
+            // Append any brand-new devices that just connected
+            return [...mergedData, ...Array.from(incomingMap.values())];
+        });
+    }, [initialData]);
 
     const dataIds = React.useMemo<UniqueIdentifier[]>(
-        () => data?.map(({ id }) => id) || [],
+        () => data?.map(({ device_id }) => device_id) || [],
         [data]
     )
 
@@ -312,7 +320,7 @@ export function DataTable({
             columnFilters,
             pagination,
         },
-        getRowId: (row) => row.id.toString(),
+        getRowId: (row) => row.device_id,
         enableRowSelection: true,
         onRowSelectionChange: setRowSelection,
         onSortingChange: setSorting,
@@ -372,13 +380,12 @@ export function DataTable({
                                                 column.toggleVisibility(!!value)
                                             }
                                         >
-                                            {column.id}
+                                            {column.id.replace("_", " ")}
                                         </DropdownMenuCheckboxItem>
                                     )
                                 })}
                         </DropdownMenuContent>
                     </DropdownMenu>
-
                 </div>
             </div>
 
@@ -533,6 +540,3 @@ export function DataTable({
         </Tabs>
     )
 }
-
-
-

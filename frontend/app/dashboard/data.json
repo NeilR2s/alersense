@@ -1,42 +1,47 @@
 [
     {
-        "id": 1,
-        "deviceId": "S-0001",
-        "name": "Juan Ancheta",
-        "wearableStatus": "Active",
-        "hrChange": "+5%",
-        "gsrChange": "+3%"
+        "device_id": "S-0001",
+        "hr": 84.0,
+        "skt": 34.52,
+        "gsr": 1545.0,
+        "gsr_diff": 45.0,
+        "hr_diff": 4.0,
+        "status": "Attentive"
     },
     {
-        "id": 2,
-        "deviceId": "S-0002",
-        "name": "Kirk Hernandez",
-        "wearableStatus": "Active",
-        "hrChange": "+3.5%",
-        "gsrChange": "+2%"
+        "device_id": "S-0002",
+        "hr": 82.8,
+        "skt": 34.81,
+        "gsr": 1632.0,
+        "gsr_diff": 32.0,
+        "hr_diff": 2.8,
+        "status": "Attentive"
     },
     {
-        "id": 3,
-        "deviceId": "S-0003",
-        "name": "Tim Burnal",
-        "wearableStatus": "Inactive",
-        "hrChange": "-14.5%",
-        "gsrChange": "-11%"
+        "device_id": "S-0003",
+        "hr": 68.4,
+        "skt": 33.54,
+        "gsr": 1335.0,
+        "gsr_diff": -165.0,
+        "hr_diff": -11.6,
+        "status": "Inattentive"
     },
     {
-        "id": 4,
-        "deviceId": "S-0004",
-        "name": "Awra Briguela",
-        "wearableStatus": "Inactive",
-        "hrChange": "-9.6%",
-        "gsrChange": "-22%"
+        "device_id": "S-0004",
+        "hr": 76.84,
+        "skt": 33.12,
+        "gsr": 1092.0,
+        "gsr_diff": -308.0,
+        "hr_diff": -8.16,
+        "status": "Inattentive"
     },
     {
-        "id": 5,
-        "deviceId": "S-0005",
-        "name": "Thomas Shelby",
-        "wearableStatus": "Disconnected",
-        "hrChange": "0%",
-        "gsrChange": "0%"
+        "device_id": "S-0005",
+        "hr": 0.0,
+        "skt": 0.0,
+        "gsr": 0.0,
+        "gsr_diff": 0.0,
+        "hr_diff": 0.0,
+        "status": "Disconnected"
     }
 ]
