@@ -194,7 +194,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     },
     {
         accessorKey: "status",
-        header: "Camera",
+        header: "Status",
         cell: ({ row }) => {
             const status = (row.original.status == "Inattentive" && row.original.status_yolo == "Inattentive") ? "Inattentive" : "Attentive";
             return (
