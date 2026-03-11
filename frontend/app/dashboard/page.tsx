@@ -18,6 +18,7 @@ interface Telemetry {
     gsr_diff: number;
     hr_diff: number;
     status: string;
+    status_yolo: string;
 }
 
 export default function Page() {

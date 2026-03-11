@@ -89,6 +89,7 @@ export const schema = z.object({
     gsr_diff: z.number(),
     hr_diff: z.number(),
     status: z.string(),
+    status_yolo: z.string(),
 })
 
 function DragHandle({ id }: { id: string }) {
@@ -155,9 +156,47 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     },
     {
         accessorKey: "status",
-        header: "Status",
+        header: "Wearable",
         cell: ({ row }) => {
             const status = row.original.status;
+            return (
+                <Badge variant="outline" className="text-muted-foreground px-1.5 gap-1">
+                    {status === "Attentive" ? (
+                        <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 size-4" />
+                    ) : status === "Inattentive" ? (
+                        <IconCircleCheckFilled className="fill-red-500 dark:fill-red-400 size-4" />
+                    ) : (
+                        <IconLoader className="size-4" />
+                    )}
+                    {status}
+                </Badge>
+            )
+        },
+    },
+    {
+        accessorKey: "status",
+        header: "Camera",
+        cell: ({ row }) => {
+            const status = row.original.status_yolo;
+            return (
+                <Badge variant="outline" className="text-muted-foreground px-1.5 gap-1">
+                    {status === "Attentive" ? (
+                        <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 size-4" />
+                    ) : status === "Inattentive" ? (
+                        <IconCircleCheckFilled className="fill-red-500 dark:fill-red-400 size-4" />
+                    ) : (
+                        <IconLoader className="size-4" />
+                    )}
+                    {status}
+                </Badge>
+            )
+        },
+    },
+    {
+        accessorKey: "status",
+        header: "Camera",
+        cell: ({ row }) => {
+            const status = (row.original.status == "Inattentive" && row.original.status_yolo == "Inattentive") ? "Inattentive" : "Attentive";
             return (
                 <Badge variant="outline" className="text-muted-foreground px-1.5 gap-1">
                     {status === "Attentive" ? (
