@@ -155,7 +155,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         ),
     },
     {
-        accessorKey: "status",
+        accessorKey: "wearable_status",
         header: "Wearable",
         cell: ({ row }) => {
             const status = row.original.status;
@@ -174,7 +174,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         },
     },
     {
-        accessorKey: "status",
+        accessorKey: "camera_status",
         header: "Camera",
         cell: ({ row }) => {
             const status = row.original.status_yolo;
