@@ -1,21 +1,15 @@
 'use client';
 
 import { AppSidebar } from "@/components/app-sidebar"
-import { DataTable } from "@/components/table"
 import { SiteHeader } from "@/components/site-header"
-import {
-    SidebarInset,
-    SidebarProvider,
-} from "@/components/ui/sidebar"
-import { useEffect, useState, useRef } from 'react';
-import io, { Socket } from 'socket.io-client';
-
-
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { useEffect, useRef } from 'react';
+import { useSocket } from "@/contexts/SocketContext";
 
 interface Detection {
     label: string;
     confidence: number;
-    bbox: [number, number, number, number]; // x1, y1, x2, y2
+    bbox: [number, number, number, number];
 }
 
 interface StreamData {
@@ -24,69 +18,46 @@ interface StreamData {
 }
 
 export default function Page() {
-    // const { user } = useAuth();
-    const [isConnected, setIsConnected] = useState(false);
+    const { isConnected, socket } = useSocket();
     const imageRef = useRef<HTMLImageElement>(null);
-    const socketRef = useRef<Socket | null>(null);
 
     useEffect(() => {
-        socketRef.current = io(process.env.NEXT_PUBLIC_SERVER_URL, { auth: { token: process.env.NEXT_PUBLIC_VIEWER_TOKEN } });
+        if (!socket) return;
 
-        const onConnect = () => {
-            console.log('Connected to Flask Stream');
-            setIsConnected(true);
-        }
-        const onDisconnect = () => {
-            console.log('Disconnected to Flask Stream');
-            setIsConnected(false);
-        }
-
-        const onVideoFeed = (data: any) => {
-            console.log(data.image)
+        const onVideoFeed = (data: StreamData) => {
             const blob = new Blob([data.image], { type: "image/jpeg" });
             const url = URL.createObjectURL(blob);
+
             if (imageRef.current) {
                 if (imageRef.current.src) {
-                    URL.revokeObjectURL(imageRef.current.src);
+                    URL.revokeObjectURL(imageRef.current.src); // Prevent memory leaks
                 }
                 imageRef.current.src = url;
-                // console.log(imageRef.current.src)
             } else {
                 console.error("Attempting to mutate a null HTMLImageElement reference")
-                return;
             }
         }
 
-        socketRef.current.on('connect', onConnect);
-        socketRef.current.on('disconnect', onDisconnect);
-        socketRef.current.on('video_feed', onVideoFeed);
+        // Attach local listener for the video feed
+        socket.on('video_feed', onVideoFeed);
 
-        // Cleanup on unmount
         return () => {
-            if (socketRef.current) {
-                setIsConnected(false);
-                socketRef.current.off('connect', onConnect);
-                socketRef.current.off('disconnect', onDisconnect);
-                socketRef.current.off('video_feed', onVideoFeed);
-                socketRef.current.disconnect();
-            }
+            socket.off('video_feed', onVideoFeed);
         };
-    }, []);
+    }, [socket]); // Re-run if the socket instance changes
 
     return (
         <SidebarProvider
             style={{
-                "--sidebar-width": "18rem", // 72 * 0.25rem
-                "--header-height": "3rem",  // 12 * 0.25rem
+                "--sidebar-width": "18rem",
+                "--header-height": "3rem",
             } as React.CSSProperties}
         >
             <AppSidebar variant="inset" />
             <SidebarInset>
                 <SiteHeader />
                 <div className="flex flex-1 flex-col">
-                    {/* Stream Container */}
-
-                    <div className="flex flex-col items-center justify-center  p-4">
+                    <div className="flex flex-col items-center justify-center p-4">
                         <div className="relative aspect-video w-full max-w-4xl overflow-hidden rounded-2xl bg-black shadow-xl">
                             {!isConnected && (
                                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 text-zinc-500 animate-pulse">
@@ -95,12 +66,11 @@ export default function Page() {
                             )}
                             <img
                                 ref={imageRef}
-                                alt=""
+                                alt="Video Stream Feed"
                                 className="h-full w-full object-contain"
                             />
                         </div>
                     </div>
-
                 </div>
             </SidebarInset>
         </SidebarProvider>

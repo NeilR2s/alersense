@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Google_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SocketProvider } from "@/contexts/SocketContext";
 import { Toaster } from "sonner";
 
 
@@ -28,8 +29,10 @@ export default function RootLayout({
                 className={`${googleSans.className} antialiased`}
             >
                 <AuthProvider>
-                    {children}
-                    <Toaster />
+                    <SocketProvider>
+                        {children}
+                        <Toaster />
+                    </SocketProvider>
                 </AuthProvider>
             </body>
         </html>
