@@ -6,8 +6,7 @@ import {
     IconDatabase,
     IconFileWord,
     IconHelp,
-    IconInnerShadowTop,
-    IconListDetails,
+    IconUser,
     IconReport,
     IconSearch,
     IconSettings,
@@ -38,6 +37,11 @@ const data = {
         avatar: auth.currentUser?.photoURL,
     },
     navMain: [
+        {
+            title: "Home",
+            url: "/home",
+            icon: IconUser,
+        },
         {
             title: "Dashboard",
             url: "/dashboard",
