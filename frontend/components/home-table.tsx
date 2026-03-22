@@ -83,13 +83,13 @@ import {
 
 export const schema = z.object({
     device_id: z.string(),
-    hr: z.number(),
-    skt: z.number(),
-    gsr: z.number(),
-    gsr_diff: z.number(),
-    hr_diff: z.number(),
-    wearableStatus: z.string(),
-    cameraStatus: z.string(),
+    hr: z.number().optional(),
+    skt: z.number().optional(),
+    gsr: z.number().optional(),
+    gsr_diff: z.number().optional(),
+    hr_diff: z.number().optional(),
+    wearableStatus: z.string().optional(),
+    cameraStatus: z.string().optional(),
     finalStatus: z.string(),
 })
 
@@ -109,7 +109,6 @@ function DragHandle({ id }: { id: string }) {
         </Button>
     )
 }
-
 
 function StatusBadge({ status }: { status: string }) {
     return (
@@ -160,7 +159,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     },
     {
         accessorKey: "device_id",
-        header: "Device ID",
+        header: "Device / Student ID",
         cell: ({ row }) => (
             <div className="w-0.5">
                 <Badge variant="outline" className="text-muted-foreground px-1.5">
@@ -170,58 +169,9 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         ),
     },
     {
-        accessorKey: "wearableStatus",
-        header: "Wearable",
-        cell: ({ row }) => <StatusBadge status={row.original.wearableStatus} />,
-    },
-    {
-        accessorKey: "cameraStatus",
-        header: "Camera",
-        cell: ({ row }) => <StatusBadge status={row.original.cameraStatus} />,
-    },
-    {
         accessorKey: "finalStatus",
         header: "Status",
         cell: ({ row }) => <StatusBadge status={row.original.finalStatus} />,
-    },
-    {
-        accessorKey: "hr",
-        header: "HR",
-        cell: ({ row }) => <div>{row.original.hr}</div>,
-    },
-    {
-        accessorKey: "skt",
-        header: "SKT (°C)",
-        cell: ({ row }) => <div>{row.original.skt}</div>,
-    },
-    {
-        accessorKey: "gsr",
-        header: "GSR",
-        cell: ({ row }) => <div>{row.original.gsr}</div>,
-    },
-    {
-        accessorKey: "hr_diff",
-        header: "HR Diff",
-        cell: ({ row }) => {
-            const diff = row.original.hr_diff;
-            return (
-                <div className={`w-1 ${diff < 0 ? "text-red-500" : diff > 0 ? "text-green-500" : ""}`}>
-                    {diff > 0 ? `+${diff}` : diff}
-                </div>
-            )
-        },
-    },
-    {
-        accessorKey: "gsr_diff",
-        header: "GSR Diff",
-        cell: ({ row }) => {
-            const diff = row.original.gsr_diff;
-            return (
-                <div className={`w-1 ${diff < 0 ? "text-red-500" : diff > 0 ? "text-green-500" : ""}`}>
-                    {diff > 0 ? `+${diff}` : diff}
-                </div>
-            )
-        },
     },
     {
         id: "actions",
@@ -411,9 +361,9 @@ export function HomeDataTable({
                         id={sortableId}
                     >
                         <Table>
-                            <TableHeader className="bg-muted sticky top-0 z-10">
+                            <TableHeader className="bg-red-800 sticky top-0 z-10">
                                 {table.getHeaderGroups().map((headerGroup) => (
-                                    <TableRow key={headerGroup.id}>
+                                    <TableRow key={headerGroup.id} className="text-primary-foreground">
                                         {headerGroup.headers.map((header) => {
                                             return (
                                                 <TableHead key={header.id} colSpan={header.colSpan}>
