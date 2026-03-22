@@ -1,8 +1,8 @@
-// context/SocketContext.tsx
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import io, { Socket } from 'socket.io-client';
+
 
 export interface Telemetry {
     device_id: string;
@@ -11,29 +11,61 @@ export interface Telemetry {
     gsr: number;
     gsr_diff: number;
     hr_diff: number;
-    status: string;
-    status_yolo: string;
+    status: string; // wearable-reported attention status
 }
+
+export interface Detection {
+    class_name: string;
+    confidence: number;
+    bbox: [number, number, number, number];
+}
+
+export interface StudentStatus {
+    device_id: string;
+    wearableStatus: 'Attentive' | 'Inattentive' | 'No Signal';
+    cameraStatus: 'Attentive' | 'Inattentive' | 'No Signal';
+    finalStatus: 'Attentive' | 'Inattentive';
+}
+
+/* YOLO classes that indicate inattentive behaviour */
+const INATTENTIVE_CLASSES = new Set([
+    'looking_away',
+    'phone_use',
+    'sleeping',
+    'talking',
+]);
+
+/** Number of spatial zones the camera frame is divided into */
+const ZONES = 5;
+
+/** Default frame width that the inference pipeline produces */
+const DEFAULT_FRAME_WIDTH = 640;
+
 
 interface SocketContextProps {
     socket: Socket | null;
     isConnected: boolean;
     telemetryMap: Record<string, Telemetry>;
+    detections: Detection[];
+    studentStatusMap: Record<string, StudentStatus>;
 }
 
 const SocketContext = createContext<SocketContextProps>({
     socket: null,
     isConnected: false,
     telemetryMap: {},
+    detections: [],
+    studentStatusMap: {},
 });
+
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [telemetryMap, setTelemetryMap] = useState<Record<string, Telemetry>>({});
+    const [detections, setDetections] = useState<Detection[]>([]);
 
     useEffect(() => {
-        // Initialize socket connection once
         const socketInstance = io(process.env.NEXT_PUBLIC_SERVER_URL!, {
             auth: { token: process.env.NEXT_PUBLIC_VIEWER_TOKEN },
         });
@@ -50,21 +82,72 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             setIsConnected(false);
         });
 
+        // Wearable telemetry (biometrics + wearable attention status)
         socketInstance.on('telemetry_update', (newData: Telemetry) => {
-            setTelemetryMap((prevMap) => ({
-                ...prevMap,
+            setTelemetryMap((prev) => ({
+                ...prev,
                 [newData.device_id]: newData,
             }));
         });
 
+        // Camera detections (separated from video frames)
+        socketInstance.on('detection_update', (data: { predictions: Detection[] }) => {
+            setDetections(data.predictions ?? []);
+        });
+
         return () => {
-            // Cleanup on unmount
             socketInstance.disconnect();
         };
     }, []);
 
+    const studentStatusMap = useMemo(() => {
+        const statusMap: Record<string, StudentStatus> = {};
+        const zoneWidth = DEFAULT_FRAME_WIDTH / ZONES;
+
+        // Sort devices alphabetically for deterministic left-to-right zone assignment
+        const sortedDevices = Object.values(telemetryMap).sort((a, b) =>
+            a.device_id.localeCompare(b.device_id)
+        );
+
+        sortedDevices.forEach((telemetry, zoneIndex) => {
+            if (zoneIndex >= ZONES) return; // cap to available zones
+
+            const bestDetection = detections
+                .filter((d) => {
+                    const cx = (d.bbox[0] + d.bbox[2]) / 2;
+                    return cx >= zoneIndex * zoneWidth && cx < (zoneIndex + 1) * zoneWidth;
+                })
+                .sort((a, b) => b.confidence - a.confidence)[0] ?? null;
+
+            const wearableStatus: StudentStatus['wearableStatus'] =
+                telemetry.status === 'Inattentive' ? 'Inattentive' : 'Attentive';
+
+            const cameraStatus: StudentStatus['cameraStatus'] = bestDetection
+                ? (INATTENTIVE_CLASSES.has(bestDetection.class_name) ? 'Inattentive' : 'Attentive')
+                : 'No Signal';
+
+            // Students are attentive by default.
+            // Only flagged inattentive when BOTH sources independently agree.
+            const finalStatus: StudentStatus['finalStatus'] =
+                wearableStatus === 'Inattentive' && cameraStatus === 'Inattentive'
+                    ? 'Inattentive'
+                    : 'Attentive';
+
+            statusMap[telemetry.device_id] = {
+                device_id: telemetry.device_id,
+                wearableStatus,
+                cameraStatus,
+                finalStatus,
+            };
+        });
+
+        return statusMap;
+    }, [telemetryMap, detections]);
+
     return (
-        <SocketContext.Provider value={{ socket, isConnected, telemetryMap }}>
+        <SocketContext.Provider
+            value={{ socket, isConnected, telemetryMap, detections, studentStatusMap }}
+        >
             {children}
         </SocketContext.Provider>
     );

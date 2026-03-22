@@ -1,4 +1,3 @@
-// dashboardPage.tsx
 'use client';
 
 import { AppSidebar } from "@/components/app-sidebar"
@@ -8,9 +7,23 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useSocket } from "@/contexts/SocketContext";
 
 export default function Page() {
-    const { isConnected, telemetryMap } = useSocket();
+    const { isConnected, telemetryMap, studentStatusMap } = useSocket();
 
-    const tableData = Object.values(telemetryMap);
+    // Merge raw biometrics with the context-computed attention statuses
+    const tableData = Object.values(telemetryMap).map((t) => {
+        const status = studentStatusMap[t.device_id];
+        return {
+            device_id: t.device_id,
+            hr: t.hr,
+            skt: t.skt,
+            gsr: t.gsr,
+            gsr_diff: t.gsr_diff,
+            hr_diff: t.hr_diff,
+            wearableStatus: status?.wearableStatus ?? 'No Signal',
+            cameraStatus: status?.cameraStatus ?? 'No Signal',
+            finalStatus: status?.finalStatus ?? 'Attentive',
+        };
+    });
 
     return (
         <SidebarProvider

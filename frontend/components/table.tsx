@@ -88,14 +88,13 @@ export const schema = z.object({
     gsr: z.number(),
     gsr_diff: z.number(),
     hr_diff: z.number(),
-    status: z.string(),
-    status_yolo: z.string(),
+    wearableStatus: z.string(),
+    cameraStatus: z.string(),
+    finalStatus: z.string(),
 })
 
 function DragHandle({ id }: { id: string }) {
-    const { attributes, listeners } = useSortable({
-        id,
-    })
+    const { attributes, listeners } = useSortable({ id })
 
     return (
         <Button
@@ -108,6 +107,22 @@ function DragHandle({ id }: { id: string }) {
             <IconGripVertical className="text-muted-foreground size-3" />
             <span className="sr-only">Drag to reorder</span>
         </Button>
+    )
+}
+
+
+function StatusBadge({ status }: { status: string }) {
+    return (
+        <Badge variant="outline" className="text-muted-foreground px-1.5 gap-1">
+            {status === "Attentive" ? (
+                <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 size-4" />
+            ) : status === "Inattentive" ? (
+                <IconCircleCheckFilled className="fill-red-500 dark:fill-red-400 size-4" />
+            ) : (
+                <IconLoader className="size-4" />
+            )}
+            {status}
+        </Badge>
     )
 }
 
@@ -155,61 +170,19 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         ),
     },
     {
-        accessorKey: "wearable_status",
+        accessorKey: "wearableStatus",
         header: "Wearable",
-        cell: ({ row }) => {
-            const status = row.original.status;
-            return (
-                <Badge variant="outline" className="text-muted-foreground px-1.5 gap-1">
-                    {status === "Attentive" ? (
-                        <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 size-4" />
-                    ) : status === "Inattentive" ? (
-                        <IconCircleCheckFilled className="fill-red-500 dark:fill-red-400 size-4" />
-                    ) : (
-                        <IconLoader className="size-4" />
-                    )}
-                    {status}
-                </Badge>
-            )
-        },
+        cell: ({ row }) => <StatusBadge status={row.original.wearableStatus} />,
     },
     {
-        accessorKey: "camera_status",
+        accessorKey: "cameraStatus",
         header: "Camera",
-        cell: ({ row }) => {
-            const status = row.original.status_yolo;
-            return (
-                <Badge variant="outline" className="text-muted-foreground px-1.5 gap-1">
-                    {status === "Attentive" ? (
-                        <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 size-4" />
-                    ) : status === "Inattentive" ? (
-                        <IconCircleCheckFilled className="fill-red-500 dark:fill-red-400 size-4" />
-                    ) : (
-                        <IconLoader className="size-4" />
-                    )}
-                    {status}
-                </Badge>
-            )
-        },
+        cell: ({ row }) => <StatusBadge status={row.original.cameraStatus} />,
     },
     {
-        accessorKey: "status",
+        accessorKey: "finalStatus",
         header: "Status",
-        cell: ({ row }) => {
-            const status = (row.original.status == "Inattentive" && row.original.status_yolo == "Inattentive") ? "Inattentive" : "Attentive";
-            return (
-                <Badge variant="outline" className="text-muted-foreground px-1.5 gap-1">
-                    {status === "Attentive" ? (
-                        <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400 size-4" />
-                    ) : status === "Inattentive" ? (
-                        <IconCircleCheckFilled className="fill-red-500 dark:fill-red-400 size-4" />
-                    ) : (
-                        <IconLoader className="size-4" />
-                    )}
-                    {status}
-                </Badge>
-            )
-        },
+        cell: ({ row }) => <StatusBadge status={row.original.finalStatus} />,
     },
     {
         accessorKey: "hr",
@@ -278,7 +251,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
 
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
     const { transform, transition, setNodeRef, isDragging } = useSortable({
-        id: row.original.device_id, // Changed to use device_id
+        id: row.original.device_id,
     })
 
     return (
@@ -326,20 +299,17 @@ export function DataTable({
     )
     React.useEffect(() => {
         setData((prevData) => {
-            // Create a quick lookup map of the incoming fresh data
             const incomingMap = new Map(initialData.map(item => [item.device_id, item]));
 
-            // Update existing items in their current dragged order
             const mergedData = prevData.map(item => {
                 if (incomingMap.has(item.device_id)) {
                     const updatedItem = incomingMap.get(item.device_id)!;
-                    incomingMap.delete(item.device_id); // Remove from map once processed
+                    incomingMap.delete(item.device_id);
                     return updatedItem;
                 }
                 return item;
             });
 
-            // Append any brand-new devices that just connected
             return [...mergedData, ...Array.from(incomingMap.values())];
         });
     }, [initialData]);
