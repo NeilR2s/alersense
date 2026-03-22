@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useEffect, useRef, useState } from 'react';
 import { useSocket } from "@/contexts/SocketContext";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Detection {
     class_name: string;
@@ -114,10 +115,11 @@ export default function Page() {
             <SidebarInset>
                 <SiteHeader />
                 <div className="flex flex-1 flex-col p-4 md:p-6 lg:p-8 gap-6">
+                    {/* Video Feed */}
                     <div className="flex flex-col items-center justify-center w-full">
                         <div className="relative aspect-video w-full max-w-5xl overflow-hidden rounded-2xl bg-black shadow-xl ring-1 ring-white/10">
                             {!isConnected && (
-                                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/80 text-zinc-400 animate-pulse">
+                                <div className="absolute inset-0 z-10 flex items-center justify-center bg-blacanimate-pulse">
                                     <p className="text-sm font-medium tracking-wide">Connecting to Live Feed...</p>
                                 </div>
                             )}
@@ -126,66 +128,42 @@ export default function Page() {
                                 alt="Video Stream Feed"
                                 className="h-full w-full object-contain"
                             />
-
-                            {/* Zones UI Feedback Overlay */}
-                            <div className="absolute inset-0 grid grid-cols-5 pointer-events-none">
-                                {studentsData.map((student, i) => (
-                                    <div
-                                        key={i}
-                                        className={`border-r border-white/10 last:border-0 flex flex-col justify-end p-2 transition-colors duration-500 ${student.dualConfirmation ? 'bg-emerald-500/10' : 'bg-rose-500/10'
-                                            }`}
-                                    >
-                                        <div className="bg-zinc-950/80 backdrop-blur-md rounded-lg p-3 text-xs text-zinc-200 border border-white/10 shadow-lg">
-                                            <div className="font-semibold text-sm mb-2 text-white flex justify-between items-center">
-                                                <span>Student {student.id}</span>
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <div className="flex justify-between items-center gap-2">
-                                                    <span className="text-zinc-400">Camera</span>
-                                                    <span className={`font-medium ${student.cameraAttentive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                        {student.detection ? (student.cameraAttentive ? 'Attentive' : 'Distracted') : 'No Signal'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center gap-2">
-                                                    <span className="text-zinc-400">Wearable</span>
-                                                    <span className={`font-medium ${student.wearableAttentive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                        {student.telemetry ? (student.wearableAttentive ? 'Attentive' : 'Distracted') : 'No Signal'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center">
-                                                <span className="text-zinc-300">Dual Sync</span>
-                                                <span className={`font-bold ${student.dualConfirmation ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                    {student.dualConfirmation ? 'CONFIRMED' : 'FAILED'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
                     </div>
 
-                    {/* Extended Status Breakdown Bottom Menu */}
+                    {/* Label Cards */}
                     <div className="grid grid-cols-5 gap-4 w-full max-w-5xl mx-auto">
                         {studentsData.map((student, i) => (
-                            <div key={i} className="flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-sm">
-                                <h3 className="text-sm font-semibold mb-3 text-center">Zone {student.id}</h3>
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-zinc-500">Pose:</span>
-                                        <span className="capitalize">{student.detection ? student.detection.class_name.replace('_', ' ') : 'None'}</span>
+                            <Card key={i} className="text-xs">
+                                <CardHeader>
+                                    <CardTitle>Student {student.id}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex justify-between items-center gap-2">
+                                        <span>Camera</span>
+                                        <span className={`font-medium ${student.cameraAttentive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            {student.detection ? (student.cameraAttentive ? 'Attentive' : 'Distracted') : 'No Signal'}
+                                        </span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-zinc-500">Conf:</span>
-                                        <span>{student.detection ? `${(student.detection.confidence * 100).toFixed(1)}%` : '0%'}</span>
+                                    <div className="flex justify-between items-center gap-2">
+                                        <span>Wearable</span>
+                                        <span className={`font - medium ${student.wearableAttentive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            {student.telemetry ? (student.wearableAttentive ? 'Attentive' : 'Distracted') : 'No Signal'}
+                                        </span>
                                     </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </SidebarInset>
-        </SidebarProvider>
+                                </CardContent>
+                                <CardFooter className="flex justify-between items-center">
+                                    <span>Dual Sync</span>
+                                    <span className={`font - bold ${student.dualConfirmation ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        {student.dualConfirmation ? 'CONFIRMED' : 'FAILED'}
+                                    </span>
+                                </CardFooter>
+                            </Card>
+                        ))
+                        }
+                    </div >
+                </div >
+            </SidebarInset >
+        </SidebarProvider >
     )
 }

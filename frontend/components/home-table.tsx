@@ -378,12 +378,12 @@ export function HomeDataTable({
                         id={sortableId}
                     >
                         <Table>
-                            <TableHeader className="bg-red-800 sticky top-0 z-10 text-foreground">
+                            <TableHeader className="bg-red-800 sticky top-0 z-1">
                                 {table.getHeaderGroups().map((headerGroup) => (
                                     <TableRow key={headerGroup.id}>
                                         {headerGroup.headers.map((header) => {
                                             return (
-                                                <TableHead key={header.id} colSpan={header.colSpan}>
+                                                <TableHead key={header.id} colSpan={header.colSpan} className="text-white">
                                                     {header.isPlaceholder
                                                         ? null
                                                         : flexRender(
