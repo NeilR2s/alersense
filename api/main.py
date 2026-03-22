@@ -85,7 +85,16 @@ def handle_video_feed(payload):
     if not isinstance(payload, dict):
         logger.warning("Invalid video feed payload")
         return
-    emit("video_feed", payload, to=settings.viewer_room)
+
+    # Emit video frames to viewers (page-specific display)
+    image = payload.get("image")
+    if image is not None:
+        emit("video_feed", {"image": image}, to=settings.viewer_room)
+
+    # Emit detections (context-level state management)
+    predictions = payload.get("predictions")
+    if predictions is not None:
+        emit("detection_update", {"predictions": predictions}, to=settings.viewer_room)
 
 
 if __name__ == "__main__":
