@@ -90,4 +90,4 @@ def handle_video_feed(payload):
 
 if __name__ == "__main__":
     logger.info("Application Starup Complete.")
-    socketio.run(app, port=8080, debug=False)
+    socketio.run(app, port=8000, debug=False)
