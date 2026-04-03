@@ -11,7 +11,7 @@ export interface Telemetry {
     gsr: number;
     gsr_diff: number;
     hr_diff: number;
-    status: string; // wearable-reported attention status
+    status: 'Attentive' | 'Inattentive' | 'Calibrating' | 'Error' | 'No Signal';
 }
 
 export interface Detection {
@@ -22,7 +22,7 @@ export interface Detection {
 
 export interface StudentStatus {
     device_id: string;
-    wearableStatus: 'Attentive' | 'Inattentive' | 'No Signal';
+    wearableStatus: 'Attentive' | 'Inattentive' | 'Calibrating' | 'Error' | 'No Signal';
     cameraStatus: 'Attentive' | 'Inattentive' | 'No Signal';
     finalStatus: 'Attentive' | 'Inattentive';
 }
@@ -120,7 +120,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 .sort((a, b) => b.confidence - a.confidence)[0] ?? null;
 
             const wearableStatus: StudentStatus['wearableStatus'] =
-                telemetry.status === 'Inattentive' ? 'Inattentive' : 'Attentive';
+                telemetry.status;
 
             const cameraStatus: StudentStatus['cameraStatus'] = bestDetection
                 ? (INATTENTIVE_CLASSES.has(bestDetection.class_name) ? 'Inattentive' : 'Attentive')
