@@ -8,18 +8,26 @@
 /*
 Network Config
 */
-const char *ssid = "";
-const char *password = "";
+const char *ssid = "APH";
+const char *password = "123456780";
 const char *serverName = "https://alersense-ghbxgzesfva7cfd0.southeastasia-01.azurewebsites.net/api/telemetry";
-const String deviceID = "S-0001";
+const String deviceID = "S-0002";
 
 /*
 ESP Hardware Configs
 */
 const int PIN_GSR = 0;
-const int SDA_PIN = 10;
-const int SCL_PIN = 9;
+const int SDA_PIN = 9;
+const int SCL_PIN = 10;
 MAX30105 particleSensor;
+
+/*
+Status String Constants
+*/
+static const char *STATUS_CALIBRATING = "Calibrating";
+static const char *STATUS_ERROR = "Error";
+static const char *STATUS_ATTENTIVE = "Attentive";
+static const char *STATUS_INATTENTIVE = "Inattentive";
 
 /*
 Hardware Magic Number Configs
@@ -39,6 +47,7 @@ const float THRESHOLD_GSR_PERCENT = -9.49;
 const float THRESH_HR_PERCENT = -3.98;
 const float TEMP_ANALOG_SCALING = 0.488;
 const long THRESHOLD_IR_DETECTION = 50000;
+const unsigned long TELEMETRY_INTERVAL = 5000; // Global interval for telemetry streaming
 
 const float GSR_ROLLING_ALPHA = 0.005;
 const float GSR_ALPHA_UP = 0.05;
@@ -69,7 +78,7 @@ struct TelemetryPayload
     float gsrAdjusted;
     float hrPercentDiff;
     float gsrPercentDiff;
-    char status[16];
+    char status[24]; // Increased size to comfortably fit "Calibrating"
 };
 
 QueueHandle_t telemetryQueue;
@@ -86,19 +95,32 @@ void programAssert(bool condition, const char *errorMsg)
         Serial.print("[ASSERT FAIL] ");
         Serial.println(errorMsg);
         while (1)
-            ;
+            delay(1000);
+    }
+}
+
+// Helper function to easily push data to the HTTP task queue
+void queueTelemetry(float hr, float skt, float gsr, float hrDiff, float gsrDiff, const char *statusMsg)
+{
+    TelemetryPayload newPayload;
+    newPayload.hr = hr;
+    newPayload.skt = skt;
+    newPayload.gsrAdjusted = gsr;
+    newPayload.hrPercentDiff = hrDiff;
+    newPayload.gsrPercentDiff = gsrDiff;
+    strlcpy(newPayload.status, statusMsg, sizeof(newPayload.status));
+
+    if (xQueueSend(telemetryQueue, &newPayload, 0) != pdPASS)
+    {
+        Serial.println("[WARNING] Telemetry queue full, dropping packet.");
     }
 }
 
 // Formula: Gs = ((2^n - 1) - ADC) / (ADC * Rf)
 float computeRawConductance(float adcVal, float rfResistor)
 {
-    // return 0 early if sensor is disconnected to prevent assert crashes
     if (adcVal <= 0)
         return 0.0;
-
-    // programAssert(adcVal < ADC_MAX_VAL, "(ADC Bounds Check) ADC value out of range");
-    // programAssert(rfResistor > 0, "(Resistor Validity) Rf must be positive");
 
     float numerator = ADC_MAX_VAL - adcVal;
     float denominator = adcVal * rfResistor;
@@ -108,9 +130,6 @@ float computeRawConductance(float adcVal, float rfResistor)
 // Formula: Gs_adj = [1 - (T - 37)(0.03)]
 float computeAdjustedGsr(float rawGs, float currentTemp)
 {
-    // programAssert(rawGs >= 0, "Negative conductance detected");
-    // programAssert(currentTemp > 10.0 && currentTemp < 50.0, "Skin temperature sensor fault");
-
     float tempDiff = currentTemp - TEMP_BASELINE_REF;
     float correctionFactor = 1.0 - (tempDiff * TEMP_COEFF);
     return correctionFactor * rawGs;
@@ -127,9 +146,6 @@ float calculatePercentDiff(float current, float baseline)
 
 float computeTemperature(float rawTemp)
 {
-    // programAssert(rawTemp >= 0, "[ASSERT FAIL] Raw temperature ADC cannot be negative");
-    // programAssert(TEMP_ANALOG_SCALING > 0, "[ASSERT FAIL] Temperature scaling constant must be positive");
-
     return rawTemp * TEMP_ANALOG_SCALING;
 }
 
@@ -183,7 +199,6 @@ float computeHeartRate(long irValue)
     }
     else
     {
-        // Reset everything if the finger is removed
         beatAvg = 0;
         samplesRecorded = 0;
         rateSpot = 0;
@@ -198,7 +213,6 @@ SensorReadings readSensors()
 
     data.gsrAdc = analogRead(PIN_GSR);
     data.irValue = particleSensor.getIR();
-    // data.sktRawAdc = random(66, 77);
     data.sktRawAdc = 72;
 
     programAssert(data.gsrAdc >= 0, "[ASSERT FAIL] GSR ADC reading is mathematically negative");
@@ -215,6 +229,7 @@ void calibrateBaseline()
 
     const unsigned long SENSOR_TIMEOUT = 60000;
     unsigned long timeoutStart = millis();
+    unsigned long lastCalibTelemetry = 0;
 
     long currentIr = 0;
     while (currentIr < THRESHOLD_IR_DETECTION)
@@ -223,16 +238,25 @@ void calibrateBaseline()
         {
             Serial.println("[ERROR] Timeout waiting for finger detection.");
             systemBaseline.valid = false;
-            return; // exit early, prevent infinite hang
+            queueTelemetry(0, 0, 0, 0, 0, STATUS_ERROR);
+            delay(2500); // Give the background task a moment to send the failure packet
+            return;
         }
+
+        // Stream "Calibrating" status
+        if (millis() - lastCalibTelemetry > TELEMETRY_INTERVAL)
+        {
+            queueTelemetry(0, 0, 0, 0, 0, STATUS_CALIBRATING);
+            lastCalibTelemetry = millis();
+        }
+
         currentIr = particleSensor.getIR();
         delay(STARTUP_DELAY);
     }
 
     Serial.println("[INFO] Finger detected. Acquiring heart rate lock (takes a few seconds)...");
-    timeoutStart = millis(); // Reset timeout counter for the next loop
+    timeoutStart = millis();
 
-    // WAIT for the heartRate.h library to establish a valid BPM
     float tempHr = 0;
     while (tempHr <= 0)
     {
@@ -240,11 +264,19 @@ void calibrateBaseline()
         {
             Serial.println("[ERROR] Timeout waiting for a stable heart rate.");
             systemBaseline.valid = false;
-            return; // exit early, prevent infinite hang
+            queueTelemetry(0, 0, 0, 0, 0, STATUS_ERROR);
+            delay(2000);
+            return;
         }
+
+        if (millis() - lastCalibTelemetry > TELEMETRY_INTERVAL)
+        {
+            queueTelemetry(tempHr, 0, 0, 0, 0, STATUS_CALIBRATING);
+            lastCalibTelemetry = millis();
+        }
+
         currentIr = particleSensor.getIR();
         tempHr = computeHeartRate(currentIr);
-        delay(20);
     }
 
     Serial.println("[INFO] Heart rate lock acquired. Measuring baselines for 20 seconds...");
@@ -259,13 +291,19 @@ void calibrateBaseline()
     {
         SensorReadings current = readSensors();
         float hr = computeHeartRate(current.irValue);
+        float temp = computeTemperature(current.sktRawAdc);
+        float rawGs = computeRawConductance(current.gsrAdc, FIXED_RESISTOR_OHMS);
+        float adjGs = computeAdjustedGsr(rawGs, temp);
+
+        // Stream live readings with "Calibrating" status during the actual measurement phase
+        if (millis() - lastCalibTelemetry > TELEMETRY_INTERVAL)
+        {
+            queueTelemetry(hr, temp, adjGs, 0, 0, STATUS_CALIBRATING);
+            lastCalibTelemetry = millis();
+        }
 
         if (hr > 0)
         {
-            float temp = computeTemperature(current.sktRawAdc);
-            float rawGs = computeRawConductance(current.gsrAdc, FIXED_RESISTOR_OHMS);
-            float adjGs = computeAdjustedGsr(rawGs, temp);
-
             sumHr += hr;
             sumGsr += adjGs;
             sumSkt += temp;
@@ -273,9 +311,14 @@ void calibrateBaseline()
         }
     }
 
-    programAssert(sampleCount > 0, "[ERROR] Calibration failed. Sensor lost contact.");
-
-    programAssert(sumHr > 0, "[ERROR] Accumulated Heart Rate is zero despite having samples");
+    if (sampleCount <= 0 || sumHr <= 0)
+    {
+        Serial.println("[ERROR] Calibration failed. Sensor lost contact.");
+        systemBaseline.valid = false;
+        queueTelemetry(0, 0, 0, 0, 0, STATUS_ERROR);
+        delay(2000);
+        return;
+    }
 
     systemBaseline.hr = sumHr / sampleCount;
     systemBaseline.gsrAdjusted = sumGsr / sampleCount;
@@ -300,7 +343,6 @@ void telemetryTask(void *pvParameters)
     {
         if (xQueueReceive(telemetryQueue, &payload, portMAX_DELAY))
         {
-
             if (WiFi.status() == WL_CONNECTED)
             {
                 WiFiClientSecure *client = new WiFiClientSecure;
@@ -374,40 +416,50 @@ void setup()
 
     bool wifiConnected = false;
 
-    for (int attempt = 1; attempt <= MAX_RETRIES && !wifiConnected; attempt++) {
+    for (int attempt = 1; attempt <= MAX_RETRIES && !wifiConnected; attempt++)
+    {
         Serial.printf("[INFO] WiFi attempt %d/%d to SSID: %s\n", attempt, MAX_RETRIES, ssid);
 
         WiFi.begin(ssid, password);
-        WiFi.setTxPower(WIFI_POWER_8_5dBm);  // try up to WIFI_POWER_11dBm if need more range, but WIFI_POWER_8_5dBm worked in the vid demo.
-        delay(1000);                           
+        WiFi.setTxPower(WIFI_POWER_8_5dBm);
+        delay(1000);
 
         unsigned long startTime = millis();
-        while (WiFi.status() != WL_CONNECTED && millis() - startTime < CONNECT_TIMEOUT_MS) {
+        while (WiFi.status() != WL_CONNECTED && millis() - startTime < CONNECT_TIMEOUT_MS)
+        {
             delay(500);
             Serial.print(".");
-            if (millis() % 2000 < 100) Serial.printf(" (status=%d)", WiFi.status());
+            if (millis() % 2000 < 100)
+                Serial.printf(" (status=%d)", WiFi.status());
         }
 
-        if (WiFi.status() == WL_CONNECTED) {
+        if (WiFi.status() == WL_CONNECTED)
+        {
             wifiConnected = true;
-        } else {
+        }
+        else
+        {
             Serial.println("\n[WARN] Timeout - disconnecting and retrying...");
             WiFi.disconnect(true);
             delay(2000);
         }
     }
 
-    if (wifiConnected) {
-        WiFi.setSleep(false);  
+    if (wifiConnected)
+    {
+        WiFi.setSleep(false);
         Serial.println("\n[INFO] Connected to WiFi!");
         Serial.print("[INFO] IP Address: ");
         Serial.println(WiFi.localIP());
         Serial.print("[INFO] RSSI: ");
         Serial.print(WiFi.RSSI());
         Serial.println(" dBm");
-    } else {
+    }
+    else
+    {
         Serial.println("\n[ERROR] Could not connect after all retries. Halting.");
-        while (1) {
+        while (1)
+        {
             delay(1000);
             Serial.print(".");
         }
@@ -416,14 +468,13 @@ void setup()
     telemetryQueue = xQueueCreate(10, sizeof(TelemetryPayload));
 
     xTaskCreatePinnedToCore(
-        telemetryTask,    // Function to implement the task
-        "Telemetry Task", // Name of the task
-        8192,             // Stack size in words
-        NULL,             // Task input parameter
-        1,                // Priority of the task
-        NULL,             // Task handle
-        0                 // Core where the task should run
-    );
+        telemetryTask,
+        "Telemetry Task",
+        8192,
+        NULL,
+        1,
+        NULL,
+        0);
     Serial.println("[INFO] HTTP Stack initialized.");
 
     calibrateBaseline();
@@ -432,12 +483,17 @@ void setup()
 
 void loop()
 {
-
     if (!systemBaseline.valid)
     {
-        Serial.println("[ERROR] Invalid baseline, stopping.");
-        while (1)
-            ; // Halt
+        static unsigned long lastFailTime = 0;
+        if (millis() - lastFailTime > TELEMETRY_INTERVAL)
+        {
+            Serial.println("[ERROR] Invalid baseline, halted. Streaming failure status.");
+            queueTelemetry(0, 0, 0, 0, 0, "Failed");
+            lastFailTime = millis();
+        }
+        delay(500); // yield time back to the FreeRTOS idle task
+        return;
     }
 
     SensorReadings current = readSensors();
@@ -457,7 +513,6 @@ void loop()
     programAssert(currentHr >= 0, "[ASSERT FAIL] Computed Heart Rate is negative");
     programAssert(currentAdjustedGs >= 0, "[ASSERT FAIL] Computed Adjusted GSR is negative");
 
-    // calculate drops ONLY if a valid heartbeat is detected to prevent zero-division/noise
     if (currentHr > 0)
     {
         float hrPercentDiff = calculatePercentDiff(currentHr, systemBaseline.hr);
@@ -468,23 +523,10 @@ void loop()
 
         String status = (hrDrop && gsrDrop) ? "Inattentive" : "Attentive";
         static unsigned long lastTelemetryTime = 0;
-        const unsigned long TELEMETRY_INTERVAL = 5000;
 
         if (millis() - lastTelemetryTime > TELEMETRY_INTERVAL)
         {
-            TelemetryPayload newPayload;
-            newPayload.hr = currentHr;
-            newPayload.skt = currentSkt;
-            newPayload.gsrAdjusted = currentAdjustedGs;
-            newPayload.hrPercentDiff = hrPercentDiff;
-            newPayload.gsrPercentDiff = gsrPercentDiff;
-            strlcpy(newPayload.status, status.c_str(), sizeof(newPayload.status));
-
-            if (xQueueSend(telemetryQueue, &newPayload, 0) != pdPASS)
-            {
-                Serial.println("[WARNING] Telemetry queue full, dropping packet.");
-            }
-
+            queueTelemetry(currentHr, currentSkt, currentAdjustedGs, hrPercentDiff, gsrPercentDiff, status.c_str());
             lastTelemetryTime = millis();
         }
 
