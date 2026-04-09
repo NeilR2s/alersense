@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { onAuthStateChanged, signOut, User, signInWithPopup } from "firebase/auth"
 import { auth, googleProvider } from "@/lib/firebase"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { toast } from "sonner"
 import FullPageLoader from "@/components/full-page-loader"
 
@@ -25,6 +25,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -51,11 +52,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     }
     useEffect(() => {
-        // If Firebase confirms there is no user, kick them out
-        if (!user) {
-            router.push("/");
+        if (!loading) {
+            if (!user && pathname !== "/") {
+                router.push("/");
+            } else if (user && pathname === "/") {
+                router.push("/dashboard");
+            }
         }
-    }, [user, loading, router]);
+    }, [user, loading, router, pathname]);
 
 
     const logout = async () => {
