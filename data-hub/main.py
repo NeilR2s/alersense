@@ -234,7 +234,7 @@ def main():
         sys.exit(1)
 
     try:
-        # cap, is_video = open_camera("tests/test_5_0.mp4")
+        # cap, is_video = open_camera("tests/test_1.mp4")
         cap, is_video = open_camera(settings.camera_index)
     except RuntimeError as e:
         logger.critical(e)
