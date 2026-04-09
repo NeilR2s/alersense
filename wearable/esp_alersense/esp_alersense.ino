@@ -6,12 +6,24 @@
 #include "WiFiClientSecure.h"
 
 /*
+NOTE: FOR THE DEFECTIVE BUZZERS:
+Uncomment all function calls that reference pump buzzer delay and update buzzer.
+HOWEVER, do not remove the function definitions
+
+NOTE: FOR WIFI
+use the 2.5 GHZ band for mobile data, DO NOT USE 5ghz.
+SSID is network name (e.g. AlmerHotspot)
+PASSWORD is password.
+To check if connects, use your phone.
+*/
+
+/*
 Network Config
 */
-const char *ssid = "APH";
-const char *password = "123456780";
+const char *ssid = "";     // UPDATE THIS
+const char *password = ""; // UPDATE THIS
 const char *serverName = "https://alersense-ghbxgzesfva7cfd0.southeastasia-01.azurewebsites.net/api/telemetry";
-const String deviceID = "S-0002";
+const String deviceID = "S-000X"; // UPDATE THIS
 
 /*
 ESP Hardware Configs
@@ -19,6 +31,7 @@ ESP Hardware Configs
 const int PIN_GSR = 0;
 const int SDA_PIN = 9;
 const int SCL_PIN = 10;
+const int PIN_BUZZ = 2;
 MAX30105 particleSensor;
 
 /*
@@ -28,6 +41,7 @@ static const char *STATUS_CALIBRATING = "Calibrating";
 static const char *STATUS_ERROR = "Error";
 static const char *STATUS_ATTENTIVE = "Attentive";
 static const char *STATUS_INATTENTIVE = "Inattentive";
+static const char *STATUS_WARNING = "Warning";
 
 /*
 Hardware Magic Number Configs
@@ -86,6 +100,78 @@ QueueHandle_t telemetryQueue;
 BaselineData systemBaseline = {0, 0, 0, false};
 
 /*
+Buzzer Control
+*/
+struct BuzzerState
+{
+    bool isActive;
+    bool isOn;
+    unsigned long lastTransition;
+    unsigned long onDuration;
+    unsigned long offDuration;
+    int pulsesRemaining;
+};
+
+BuzzerState buzzer = {false, false, 0, 0, 0, 0};
+
+void updateBuzzer()
+{
+    if (!buzzer.isActive)
+        return;
+
+    unsigned long now = millis();
+
+    if (buzzer.isOn)
+    {
+        if (now - buzzer.lastTransition >= buzzer.onDuration)
+        {
+            digitalWrite(PIN_BUZZ, LOW); // Turn off (standard logic)
+            buzzer.isOn = false;
+            buzzer.lastTransition = now;
+            buzzer.pulsesRemaining--;
+
+            if (buzzer.pulsesRemaining <= 0)
+            {
+                buzzer.isActive = false;
+            }
+        }
+    }
+    else
+    {
+        if (now - buzzer.lastTransition >= buzzer.offDuration)
+        {
+            digitalWrite(PIN_BUZZ, HIGH); // Turn on
+            buzzer.isOn = true;
+            buzzer.lastTransition = now;
+        }
+    }
+}
+
+void triggerBuzzer(unsigned long onTime, unsigned long offTime = 0, int pulses = 1, bool force = true)
+{
+    if (!force && buzzer.isActive)
+        return; // Don't interrupt an ongoing sequence unless forced
+
+    buzzer.onDuration = onTime;
+    buzzer.offDuration = offTime;
+    buzzer.pulsesRemaining = pulses;
+    buzzer.isOn = true;
+    buzzer.isActive = true;
+    buzzer.lastTransition = millis();
+    digitalWrite(PIN_BUZZ, LOW); // Turn on
+}
+
+void pumpBuzzerDelay(unsigned long ms)
+{
+    unsigned long start = millis();
+    while (millis() - start < ms)
+    {
+        updateBuzzer();
+        delay(10);
+    }
+}
+
+/*
 Helper Functions
 */
 void programAssert(bool condition, const char *errorMsg)
@@ -112,7 +198,7 @@ void queueTelemetry(float hr, float skt, float gsr, float hrDiff, float gsrDiff,
 
     if (xQueueSend(telemetryQueue, &newPayload, 0) != pdPASS)
     {
-        Serial.println("[WARNING] Telemetry queue full, dropping packet.");
+        // Serial.println("[WARNING] Telemetry queue full, dropping packet.");
     }
 }
 
@@ -225,7 +311,8 @@ void calibrateBaseline()
 {
     programAssert(CALIBRATION_DELAY > 0, "[ASSERT FAIL] Calibration delay must be greater than zero");
 
-    Serial.println("[INFO] Starting Calibration. Place finger on sensor and stay still...");
+    // Serial.println("[INFO] Starting Calibration. Place finger on sensor and stay still...");
+    triggerBuzzer(100); // Short beep to indicate start
 
     const unsigned long SENSOR_TIMEOUT = 60000;
     unsigned long timeoutStart = millis();
@@ -234,12 +321,15 @@ void calibrateBaseline()
     long currentIr = 0;
     while (currentIr < THRESHOLD_IR_DETECTION)
     {
+        updateBuzzer();
+
         if (millis() - timeoutStart > SENSOR_TIMEOUT)
         {
-            Serial.println("[ERROR] Timeout waiting for finger detection.");
+            // Serial.println("[ERROR] Timeout waiting for finger detection.");
             systemBaseline.valid = false;
+            triggerBuzzer(1000);
             queueTelemetry(0, 0, 0, 0, 0, STATUS_ERROR);
-            delay(2500); // Give the background task a moment to send the failure packet
+            pumpBuzzerDelay(2500); // Give the background task a moment to send the failure packet
             return;
         }
 
@@ -251,21 +341,24 @@ void calibrateBaseline()
         }
 
         currentIr = particleSensor.getIR();
-        delay(STARTUP_DELAY);
+        pumpBuzzerDelay(STARTUP_DELAY);
     }
 
-    Serial.println("[INFO] Finger detected. Acquiring heart rate lock (takes a few seconds)...");
+    // Serial.println("[INFO] Finger detected. Acquiring heart rate lock (takes a few seconds)...");
     timeoutStart = millis();
 
     float tempHr = 0;
     while (tempHr <= 0)
     {
+        updateBuzzer();
+
         if (millis() - timeoutStart > SENSOR_TIMEOUT)
         {
-            Serial.println("[ERROR] Timeout waiting for a stable heart rate.");
+            // Serial.println("[ERROR] Timeout waiting for a stable heart rate.");
             systemBaseline.valid = false;
+            triggerBuzzer(1000);
             queueTelemetry(0, 0, 0, 0, 0, STATUS_ERROR);
-            delay(2000);
+            pumpBuzzerDelay(2000);
             return;
         }
 
@@ -279,7 +372,7 @@ void calibrateBaseline()
         tempHr = computeHeartRate(currentIr);
     }
 
-    Serial.println("[INFO] Heart rate lock acquired. Measuring baselines for 20 seconds...");
+    // Serial.println("[INFO] Heart rate lock acquired. Measuring baselines for 20 seconds...");
 
     unsigned long startTime = millis();
     int sampleCount = 0;
@@ -289,6 +382,8 @@ void calibrateBaseline()
 
     while (millis() - startTime < CALIBRATION_DELAY)
     {
+        updateBuzzer();
+
         SensorReadings current = readSensors();
         float hr = computeHeartRate(current.irValue);
         float temp = computeTemperature(current.sktRawAdc);
@@ -313,10 +408,11 @@ void calibrateBaseline()
 
     if (sampleCount <= 0 || sumHr <= 0)
     {
-        Serial.println("[ERROR] Calibration failed. Sensor lost contact.");
+        // Serial.println("[ERROR] Calibration failed. Sensor lost contact.");
         systemBaseline.valid = false;
+        triggerBuzzer(1000);
         queueTelemetry(0, 0, 0, 0, 0, STATUS_ERROR);
-        delay(2000);
+        pumpBuzzerDelay(2000);
         return;
     }
 
@@ -325,14 +421,16 @@ void calibrateBaseline()
     systemBaseline.skt = sumSkt / sampleCount;
     systemBaseline.valid = true;
 
-    Serial.println("\n--- Calibration Complete ---");
-    Serial.print("Baseline HR: ");
-    Serial.println(systemBaseline.hr);
-    Serial.print("Baseline GSR: ");
-    Serial.println(systemBaseline.gsrAdjusted);
-    Serial.print("Baseline Temp: ");
-    Serial.println(systemBaseline.skt);
-    Serial.println("----------------------------\n");
+    triggerBuzzer(500, 200, 2); // Success double beep
+
+    // Serial.println("\n--- Calibration Complete ---");
+    // Serial.print("Baseline HR: ");
+    // Serial.println(systemBaseline.hr);
+    // Serial.print("Baseline GSR: ");
+    // Serial.println(systemBaseline.gsrAdjusted);
+    // Serial.print("Baseline Temp: ");
+    // Serial.println(systemBaseline.skt);
+    // Serial.println("----------------------------\n");
 }
 
 void telemetryTask(void *pvParameters)
@@ -390,6 +488,9 @@ void setup()
 {
     Serial.begin(9600);
     Wire.begin(SDA_PIN, SCL_PIN);
+
+    pinMode(PIN_BUZZ, OUTPUT);
+    digitalWrite(PIN_BUZZ, LOW); // Buzzer OFF (standard logic)
 
     while (!Serial && millis() < 5000)
         ;
@@ -483,16 +584,19 @@ void setup()
 
 void loop()
 {
+    updateBuzzer();
+
     if (!systemBaseline.valid)
     {
         static unsigned long lastFailTime = 0;
         if (millis() - lastFailTime > TELEMETRY_INTERVAL)
         {
-            Serial.println("[ERROR] Invalid baseline, halted. Streaming failure status.");
+            // Serial.println("[ERROR] Invalid baseline, halted. Streaming failure status.");
+            triggerBuzzer(500);
             queueTelemetry(0, 0, 0, 0, 0, "Failed");
             lastFailTime = millis();
         }
-        delay(500); // yield time back to the FreeRTOS idle task
+        pumpBuzzerDelay(500); // yield time back to the FreeRTOS idle task
         return;
     }
 
@@ -500,8 +604,8 @@ void loop()
 
     if (current.gsrAdc < 100)
     {
-        Serial.println("[WARNING] GSR sensor lost contact. Please adjust finger.");
-        delay(500);
+        // Serial.println("[WARNING] GSR sensor lost contact. Please adjust finger.");
+        pumpBuzzerDelay(500);
         return;
     }
 
@@ -522,6 +626,15 @@ void loop()
         bool gsrDrop = gsrPercentDiff < THRESHOLD_GSR_PERCENT;
 
         String status = (hrDrop && gsrDrop) ? "Inattentive" : "Attentive";
+
+        // Immediate, edge-triggered alerting
+        static String previousStatus = "Attentive";
+        if (status == "Inattentive" && previousStatus == "Attentive")
+        {
+            triggerBuzzer(50, 50, 3, false); // Three very short 50ms rapid pulses
+        }
+        previousStatus = status;
+
         static unsigned long lastTelemetryTime = 0;
 
         if (millis() - lastTelemetryTime > TELEMETRY_INTERVAL)
@@ -530,26 +643,27 @@ void loop()
             lastTelemetryTime = millis();
         }
 
-        Serial.print("HR (BPM): ");
-        Serial.print(currentHr);
-        Serial.print(" | HR Diff: ");
-        Serial.print(hrPercentDiff);
-        Serial.print(" | GSR: ");
-        Serial.print(currentAdjustedGs);
-        Serial.print(" | GSR Diff: ");
-        Serial.print(gsrPercentDiff);
-        Serial.print("| Temp: ");
-        Serial.print(currentSkt);
-        Serial.println("C");
+        // Serial.print("HR (BPM): ");
+        // Serial.print(currentHr);
+        // Serial.print(" | HR Diff: ");
+        // Serial.print(hrPercentDiff);
+        // Serial.print(" | GSR: ");
+        // Serial.print(currentAdjustedGs);`
+        // Serial.print(" | GSR Diff: ");
+        // Serial.print(gsrPercentDiff);
+        // Serial.print("| Temp: ");
+        // Serial.print(currentSkt);
+        // Serial.println("C");
 
         float currentAlpha = (currentAdjustedGs > systemBaseline.gsrAdjusted) ? GSR_ALPHA_UP : GSR_ALPHA_DOWN;
         systemBaseline.gsrAdjusted = (currentAdjustedGs * currentAlpha) + (systemBaseline.gsrAdjusted * (1.0 - currentAlpha));
     }
     else
     {
-        Serial.print("[WAITING] IR: ");
-        Serial.print(currentHr);
-        Serial.print(" | GSR ADC: ");
-        Serial.println(currentAdjustedGs);
+        // Serial.print("[WAITING] IR: ");
+        // Serial.print(currentHr);
+        // Serial.print(" | GSR ADC: ");
+        // Serial.println(currentAdjustedGs);
+        queueTelemetry(0, 0, currentAdjustedGs, 0, 0, STATUS_WARNING);
     }
 }
