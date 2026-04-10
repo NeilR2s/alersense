@@ -57,6 +57,15 @@ export default function AlersenseLanding() {
                 {['Home', 'About Us', 'Products'].map((item) => (
                     <a key={item} href="#" className="text-2xl font-light hover:text-zinc-400 transition-colors">{item}</a>
                 ))}
+                <button
+                    className="mt-4 px-8 py-3 rounded-full bg-white text-black text-lg font-medium hover:bg-zinc-200 transition-all"
+                    onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        login();
+                    }}
+                >
+                    Sign in
+                </button>
             </div>
 
             <div className="flex flex-col lg:flex-row min-h-screen w-full relative">
@@ -79,6 +88,12 @@ export default function AlersenseLanding() {
 
                     {/* Right Actions */}
                     <div className="flex items-center gap-4">
+                        <button
+                            className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-all lg:hidden"
+                            onClick={() => login()}
+                        >
+                            Sign in
+                        </button>
                         <button
                             className="lg:hidden text-white uppercase text-xs tracking-widest"
                             onClick={() => setIsMobileMenuOpen(true)}
