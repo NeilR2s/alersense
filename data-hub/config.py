@@ -20,14 +20,14 @@ class Settings:
     # Network Optimization Settings
     video_quality: int = 75
     fps_cap: int = 1
-    stream_scale = 0.85
+    stream_scale: float = 0.85
 
     # YOLO Inference Settings
     infer_size: int = 640
     device: str = "cpu"
     yolo_verbose_logging: bool = False
-    max_det = 10
-    conf_threshold = 0.05
+    max_det: int = 10
+    conf_threshold: float = 0.05
 
 
 settings = Settings()

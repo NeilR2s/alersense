@@ -234,8 +234,8 @@ def main():
         sys.exit(1)
 
     try:
-        # cap, is_video = open_camera("tests/test_1.mp4")
-        cap, is_video = open_camera(settings.camera_index)
+        cap, is_video = open_camera("tests/test_1.mp4")
+        # cap, is_video = open_camera(settings.camera_index)
     except RuntimeError as e:
         logger.critical(e)
         sys.exit(1)
@@ -261,6 +261,10 @@ def main():
                 time.sleep(0.5)
                 continue
 
+            # Ensure frame is exactly 640x480 (OpenCV ignores cap.set for mp4 files)
+            if frame.shape[1] != settings.video_width or frame.shape[0] != settings.video_height:
+                frame = cv2.resize(frame, (settings.video_width, settings.video_height))
+
             try:
                 results = model(
                     frame,
@@ -274,6 +278,9 @@ def main():
                 continue
 
             annotated, predictions = annotate(frame, results)
+
+            # Limit number of detections to max_det
+            predictions = predictions[:settings.max_det]
 
             if settings.stream_scale < 1.0:
                 transmit = cv2.resize(
