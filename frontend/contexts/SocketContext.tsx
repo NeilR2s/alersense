@@ -109,8 +109,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             a.device_id.localeCompare(b.device_id)
         );
 
-        sortedDevices.forEach((telemetry, zoneIndex) => {
-            if (zoneIndex >= ZONES) return; // cap to available zones
+        for (let zoneIndex = 0; zoneIndex < ZONES; zoneIndex++) {
+            const telemetry = sortedDevices[zoneIndex] || null;
+            const deviceId = telemetry?.device_id || `Student ${zoneIndex + 1}`;
 
             const bestDetection = detections
                 .filter((d) => {
@@ -120,7 +121,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 .sort((a, b) => b.confidence - a.confidence)[0] ?? null;
 
             const wearableStatus: StudentStatus['wearableStatus'] =
-                telemetry.status;
+                telemetry?.status ?? 'No Signal';
 
             const cameraStatus: StudentStatus['cameraStatus'] = bestDetection
                 ? (INATTENTIVE_CLASSES.has(bestDetection.class_name) ? 'Inattentive' : 'Attentive')
@@ -133,13 +134,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                     ? 'Inattentive'
                     : 'Attentive';
 
-            statusMap[telemetry.device_id] = {
-                device_id: telemetry.device_id,
+            statusMap[deviceId] = {
+                device_id: deviceId,
                 wearableStatus,
                 cameraStatus,
                 finalStatus,
             };
-        });
+        }
 
         return statusMap;
     }, [telemetryMap, detections]);
