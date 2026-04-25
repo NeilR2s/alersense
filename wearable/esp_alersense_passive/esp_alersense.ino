@@ -20,10 +20,10 @@ To check if connects, use your phone.
 /*
 Network Config
 */
-const char *ssid = "";     // UPDATE THIS
-const char *password = ""; // UPDATE THIS
+const char *ssid = "STARLINK";            // UPDATE THIS
+const char *password = "OtB1iGE$tarlink"; // UPDATE THIS
 const char *serverName = "https://alersense-ghbxgzesfva7cfd0.southeastasia-01.azurewebsites.net/api/telemetry";
-const String deviceID = "S-000X"; // UPDATE THIS
+const String deviceID = "S-0005"; // UPDATE THIS
 
 /*
 ESP Hardware Configs
