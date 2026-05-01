@@ -83,11 +83,11 @@ import {
 
 export const schema = z.object({
     device_id: z.string(),
-    hr: z.number(),
-    skt: z.number(),
-    gsr: z.number(),
-    gsr_diff: z.number(),
-    hr_diff: z.number(),
+    hr: z.number().optional(),
+    skt: z.number().optional(),
+    gsr: z.number().optional(),
+    gsr_diff: z.number().optional(),
+    hr_diff: z.number().optional(),
     wearableStatus: z.string(),
     cameraStatus: z.string(),
     finalStatus: z.string(),
@@ -187,23 +187,26 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     {
         accessorKey: "hr",
         header: "HR",
-        cell: ({ row }) => <div>{row.original.hr}</div>,
+        cell: ({ row }) => <div>{row.original.hr ?? "--"}</div>,
     },
     {
         accessorKey: "skt",
         header: "SKT (°C)",
-        cell: ({ row }) => <div>{row.original.skt}</div>,
+        cell: ({ row }) => <div>{row.original.skt ?? "--"}</div>,
     },
     {
         accessorKey: "gsr",
         header: "GSR",
-        cell: ({ row }) => <div>{row.original.gsr}</div>,
+        cell: ({ row }) => <div>{row.original.gsr ?? "--"}</div>,
     },
     {
         accessorKey: "hr_diff",
         header: "HR Diff",
         cell: ({ row }) => {
             const diff = row.original.hr_diff;
+            if (diff === undefined) {
+                return <div className="w-1 text-muted-foreground">--</div>;
+            }
             return (
                 <div className={`w-1 ${diff < 0 ? "text-red-500" : diff > 0 ? "text-green-500" : ""}`}>
                     {diff > 0 ? `+${diff}` : diff}
@@ -216,6 +219,9 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         header: "GSR Diff",
         cell: ({ row }) => {
             const diff = row.original.gsr_diff;
+            if (diff === undefined) {
+                return <div className="w-1 text-muted-foreground">--</div>;
+            }
             return (
                 <div className={`w-1 ${diff < 0 ? "text-red-500" : diff > 0 ? "text-green-500" : ""}`}>
                     {diff > 0 ? `+${diff}` : diff}

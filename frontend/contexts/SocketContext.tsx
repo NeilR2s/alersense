@@ -35,6 +35,23 @@ const INATTENTIVE_CLASSES = new Set([
     'talking',
 ]);
 
+const HR_INATTENTIVE_THRESHOLD = -3.98;
+const GSR_INATTENTIVE_THRESHOLD = -9.49;
+
+function getWearableStatus(telemetry: Telemetry | null): StudentStatus['wearableStatus'] {
+    if (!telemetry) {
+        return 'No Signal';
+    }
+
+    if (telemetry.status === 'Calibrating' || telemetry.status === 'Error' || telemetry.status === 'No Signal') {
+        return telemetry.status;
+    }
+
+    return telemetry.hr_diff < HR_INATTENTIVE_THRESHOLD && telemetry.gsr_diff < GSR_INATTENTIVE_THRESHOLD
+        ? 'Inattentive'
+        : 'Attentive';
+}
+
 /** Number of spatial zones the camera frame is divided into */
 const ZONES = 5;
 
@@ -120,17 +137,15 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 })
                 .sort((a, b) => b.confidence - a.confidence)[0] ?? null;
 
-            const wearableStatus: StudentStatus['wearableStatus'] =
-                telemetry?.status ?? 'No Signal';
+            const wearableStatus = getWearableStatus(telemetry);
 
             const cameraStatus: StudentStatus['cameraStatus'] = bestDetection
                 ? (INATTENTIVE_CLASSES.has(bestDetection.class_name) ? 'Inattentive' : 'Attentive')
                 : 'No Signal';
 
-            // Students are attentive by default.
-            // Only flagged inattentive when BOTH sources independently agree.
+            // Flag inattentiveness when either independent signal detects it.
             const finalStatus: StudentStatus['finalStatus'] =
-                wearableStatus === 'Inattentive' && cameraStatus === 'Inattentive'
+                wearableStatus === 'Inattentive' || cameraStatus === 'Inattentive'
                     ? 'Inattentive'
                     : 'Attentive';
 

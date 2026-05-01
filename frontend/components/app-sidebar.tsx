@@ -10,7 +10,8 @@ import {
     IconReport,
     IconSearch,
     IconSettings,
-    IconPhotoVideo
+    IconPhotoVideo,
+    IconHistory
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -26,6 +27,7 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import Image from "next/image"
+import Link from "next/link"
 import { auth } from "@/lib/firebase"
 import { generateUserProfile } from "@/lib/utils"
 
@@ -46,6 +48,11 @@ const data = {
             title: "Dashboard",
             url: "/dashboard",
             icon: IconDashboard,
+        },
+        {
+            title: "Snapshots",
+            url: "/snapshots",
+            icon: IconHistory,
         },
         {
             title: "Video Feed",
@@ -100,10 +107,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                             asChild
                             className="data-[slot=sidebar-menu-button]:!p-1.5"
                         >
-                            <a href="/">
+                            <Link href="/">
                                 <Image src="/alersense-logo-black.svg" alt="alersense logo" width={35} height={35} />
                                 <span className="text-lg font-semibold ">Alersense</span>
-                            </a>
+                            </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>

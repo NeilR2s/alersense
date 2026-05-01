@@ -104,7 +104,7 @@ export default function Page() {
                                     </div>
                                 </CardContent>
                                 <CardFooter className="flex justify-between items-center">
-                                    <span>Dual Sync</span>
+                                    <span>Overall</span>
                                     <span className={`font-bold ${statusColor(student.finalStatus)}`}>
                                         {student.finalStatus}
                                     </span>

@@ -9,19 +9,19 @@ import { useSocket } from "@/contexts/SocketContext";
 export default function Page() {
     const { isConnected, telemetryMap, studentStatusMap } = useSocket();
 
-    // Merge raw biometrics with the context-computed attention statuses
-    const tableData = Object.values(telemetryMap).map((t) => {
-        const status = studentStatusMap[t.device_id];
+    // Start from computed statuses so camera-only inattentiveness still appears.
+    const tableData = Object.values(studentStatusMap).map((status) => {
+        const t = telemetryMap[status.device_id];
         return {
-            device_id: t.device_id,
-            hr: t.hr,
-            skt: t.skt,
-            gsr: t.gsr,
-            gsr_diff: t.gsr_diff,
-            hr_diff: t.hr_diff,
-            wearableStatus: status?.wearableStatus ?? 'No Signal',
-            cameraStatus: status?.cameraStatus ?? 'No Signal',
-            finalStatus: status?.finalStatus ?? 'Attentive',
+            device_id: status.device_id,
+            hr: t?.hr,
+            skt: t?.skt,
+            gsr: t?.gsr,
+            gsr_diff: t?.gsr_diff,
+            hr_diff: t?.hr_diff,
+            wearableStatus: status.wearableStatus,
+            cameraStatus: status.cameraStatus,
+            finalStatus: status.finalStatus,
         };
     });
 
