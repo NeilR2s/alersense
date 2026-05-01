@@ -125,7 +125,7 @@ export default function Page() {
                 <div className="flex flex-1 flex-col gap-5 p-4 md:p-6">
                     <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">Six-minute persistence</p>
+                            <p className="text-sm font-medium text-muted-foreground">Seven-minute persistence</p>
                             <h1 className="text-2xl font-semibold tracking-tight">Attention Snapshots</h1>
                         </div>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -154,7 +154,7 @@ export default function Page() {
                                     {isLoading ? "Loading snapshots..." : `${snapshots.length} saved snapshots`}
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="flex flex-col gap-2">
+                            <CardContent className="flex flex-col gap-2 max-h-[calc(100vh-18rem)] overflow-y-auto scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                                 {snapshots.length === 0 && !isLoading ? (
                                     <p className="text-sm text-muted-foreground">No snapshots saved for this date.</p>
                                 ) : snapshots.map((snapshot) => (
@@ -182,7 +182,7 @@ export default function Page() {
                                             : "No Snapshot Selected"}
                                     </CardTitle>
                                     <CardDescription>
-                                        Snapshot interval: {selectedSnapshot?.intervalMinutes ?? 6} minutes
+                                        Snapshot interval: {selectedSnapshot?.intervalMinutes ?? 7} minutes
                                     </CardDescription>
                                 </div>
                                 <Badge variant="outline" className={statusClass(inattentiveCount > 0 ? "Inattentive" : "Attentive")}>

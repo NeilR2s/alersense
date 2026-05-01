@@ -43,7 +43,7 @@ class SnapshotStore:
             "id": captured_at.isoformat().replace("+00:00", "Z"),
             "snapshotDate": captured_at.date().isoformat(),
             "capturedAt": captured_at.isoformat().replace("+00:00", "Z"),
-            "intervalMinutes": 6,
+            "intervalMinutes": 7,
             "students": students,
         }
 

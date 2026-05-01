@@ -137,7 +137,7 @@ def handle_video_feed(payload):
 
 def save_attention_snapshots():
     while True:
-        socketio.sleep(6 * 60)
+        socketio.sleep(7 * 60)
         if attention_state.has_signal():
             snapshot_store.save_snapshot(attention_state.get_students())
 
