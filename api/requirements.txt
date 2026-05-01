@@ -1,5 +1,7 @@
 eventlet==0.40.4
 gunicorn==25.0.3
 flask
+flask-cors
 flask-socketio
 python-dotenv>=1.2.1
+azure-cosmos>=4.15.0
