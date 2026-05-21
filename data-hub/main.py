@@ -262,7 +262,10 @@ def main():
                 continue
 
             # Ensure frame is exactly 640x480 (OpenCV ignores cap.set for mp4 files)
-            if frame.shape[1] != settings.video_width or frame.shape[0] != settings.video_height:
+            if (
+                frame.shape[1] != settings.video_width
+                or frame.shape[0] != settings.video_height
+            ):
                 frame = cv2.resize(frame, (settings.video_width, settings.video_height))
 
             try:
@@ -280,7 +283,7 @@ def main():
             annotated, predictions = annotate(frame, results)
 
             # Limit number of detections to max_det
-            predictions = predictions[:settings.max_det]
+            predictions = predictions[: settings.max_det]
 
             if settings.stream_scale < 1.0:
                 transmit = cv2.resize(

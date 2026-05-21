@@ -24,6 +24,7 @@ export interface StudentStatus {
     device_id: string;
     wearableStatus: 'Attentive' | 'Inattentive' | 'Calibrating' | 'Error' | 'No Signal';
     cameraStatus: 'Attentive' | 'Inattentive' | 'No Signal';
+    cameraBehavior: string | null;
     finalStatus: 'Attentive' | 'Inattentive';
 }
 
@@ -142,6 +143,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             const cameraStatus: StudentStatus['cameraStatus'] = bestDetection
                 ? (INATTENTIVE_CLASSES.has(bestDetection.class_name) ? 'Inattentive' : 'Attentive')
                 : 'No Signal';
+            const cameraBehavior: StudentStatus['cameraBehavior'] = bestDetection?.class_name ?? null;
 
             // Flag inattentiveness when either independent signal detects it.
             const finalStatus: StudentStatus['finalStatus'] =
@@ -153,6 +155,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 device_id: deviceId,
                 wearableStatus,
                 cameraStatus,
+                cameraBehavior,
                 finalStatus,
             };
         }

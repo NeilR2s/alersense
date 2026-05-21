@@ -109,7 +109,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         >
                             <Link href="/">
                                 <Image src="/alersense-logo-black.svg" alt="alersense logo" width={35} height={35} />
-                                <span className="text-lg font-semibold ">Alersense</span>
+                                <span className="text-lg font-semibold text-white">Alersense</span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
